@@ -1,5 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
+using System.IO;
+using System.IO.Compression;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -21,11 +26,44 @@ namespace Inedo.ProGet.UPack
         [DisplayName("user")]
         [Description("User name and password to use for servers that require authentication. Example: username:password")]
         [ExtraArgument]
-        public string Authentication { get; set; }
+        public NetworkCredential Authentication { get; set; }
 
         public override async Task<int> RunAsync()
         {
-            throw new NotImplementedException();
+            using (var packageStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read))
+            {
+                PackageMetadata info;
+
+                using (var zipFile = new ZipArchive(packageStream, ZipArchiveMode.Read, true))
+                {
+                    var entry = zipFile.GetEntry("upack.json");
+                    using (var metadataStream = entry.Open())
+                    {
+                        info = await ReadManifestAsync(metadataStream);
+                    }
+                }
+
+                packageStream.Position = 0;
+
+                PrintManifest(info);
+
+                using (var client = CreateClient(this.Authentication))
+                {
+                    using (var response = await client.PutAsync(this.Target, new StreamContent(packageStream)
+                    {
+                        Headers =
+                        {
+                            ContentType = new MediaTypeHeaderValue("application/octet-stream")
+                        }
+                    }))
+                    {
+                        response.EnsureSuccessStatusCode();
+                        Console.WriteLine($"{info.Group}:{info.Name} {info.Version} published!");
+                    }
+                }
+            }
+
+            return 0;
         }
     }
 }

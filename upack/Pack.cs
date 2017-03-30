@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -22,11 +23,30 @@ namespace Inedo.ProGet.UPack
         [DisplayName("targetDirectory")]
         [Description("Directory where the .upack file will be created. If not specified, the current working directory is used.")]
         [ExtraArgument]
-        public string TargetDirectory { get; set; } = Directory.GetCurrentDirectory();
+        public string TargetDirectory { get; set; }
 
         public override async Task<int> RunAsync()
         {
-            throw new NotImplementedException();
+            this.TargetDirectory = this.TargetDirectory ?? Environment.CurrentDirectory;
+
+            PackageMetadata info;
+
+            using (var metadataStream = File.OpenRead(this.Manifest))
+            {
+                info = await ReadManifestAsync(metadataStream);
+            }
+
+            PrintManifest(info);
+
+            var fileName = Path.Combine(this.TargetDirectory, $"{info.Name}-{info.Version}.upack");
+            using (var zipStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
+            using (var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
+            {
+                await CreateEntryFromFileAsync(zipFile, this.Manifest, "upack.json");
+                await AddDirectoryAsync(zipFile, this.SourceDirectory, "package/");
+            }
+
+            return 0;
         }
     }
 }

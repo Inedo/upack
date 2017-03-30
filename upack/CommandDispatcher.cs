@@ -19,7 +19,6 @@ namespace Inedo.ProGet.UPack
 
         public void Main(string[] args)
         {
-            bool first = true;
             bool onlyPositional = false;
             bool hadError = false;
 
@@ -28,12 +27,6 @@ namespace Inedo.ProGet.UPack
 
             foreach (var arg in args)
             {
-                if (first)
-                {
-                    first = false;
-                    continue;
-                }
-
                 if (onlyPositional || !arg.StartsWith("--"))
                 {
                     positional.Add(arg);
@@ -64,7 +57,7 @@ namespace Inedo.ProGet.UPack
             {
                 foreach (var command in commands)
                 {
-                    cmd = (Command)command.GetConstructor(null).Invoke(null);
+                    cmd = (Command)command.GetConstructor(new Type[0]).Invoke(new object[0]);
                     if (cmd.DisplayName.Equals(positional[0], StringComparison.OrdinalIgnoreCase))
                     {
                         if (hadError)
@@ -140,7 +133,7 @@ namespace Inedo.ProGet.UPack
 
         public void ShowGenericHelp()
         {
-            Console.WriteLine("Usage: upack <<command>>");
+            Console.WriteLine("Usage: upack «command»");
             Console.WriteLine();
 
             foreach (var command in commands)

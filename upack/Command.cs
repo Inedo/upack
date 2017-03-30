@@ -5,6 +5,11 @@ using System.Linq;
 using System.ComponentModel;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
+using Newtonsoft.Json;
+using System.Net;
+using System.IO.Compression;
+using System.Net.Http;
 
 namespace Inedo.ProGet.UPack
 {
@@ -28,22 +33,84 @@ namespace Inedo.ProGet.UPack
             public bool Optional { get; set; } = true;
         }
 
-        public sealed class PositionalArgument
+        public abstract class Argument
         {
-            private readonly PropertyInfo p;
+            protected readonly PropertyInfo p;
 
-            public int Index => p.GetCustomAttribute<PositionalArgumentAttribute>().Index;
-            public bool Optional => p.GetCustomAttribute<PositionalArgumentAttribute>().Optional;
-            public string DisplayName => p.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? p.Name;
-            public string Description => p.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty;
-            public object DefaultValue => p.GetCustomAttribute<DefaultValueAttribute>()?.Value;
-
-            internal PositionalArgument(PropertyInfo p)
+            internal Argument(PropertyInfo p)
             {
                 this.p = p;
             }
 
-            public string GetUsage()
+            public abstract bool Optional { get; }
+            public string DisplayName => p.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? p.Name;
+            public string Description => p.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty;
+            public object DefaultValue => p.GetCustomAttribute<DefaultValueAttribute>()?.Value;
+
+            public abstract string GetUsage();
+
+            public virtual string GetHelp()
+            {
+                return $"{this.DisplayName} - {this.Description}";
+            }
+
+            public bool TrySetValue(Command cmd, string value)
+            {
+                if (p.PropertyType == typeof(bool))
+                {
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        p.SetValue(cmd, true);
+                        return true;
+                    }
+                    if (bool.TryParse(value, out bool result))
+                    {
+                        p.SetValue(cmd, result);
+                        return true;
+                    }
+                    Console.WriteLine($@"--{this.DisplayName} must be ""true"" or ""false"".");
+                    return false;
+                }
+
+                if (p.PropertyType == typeof(string))
+                {
+                    p.SetValue(cmd, value);
+                    return true;
+                }
+
+                if (p.PropertyType == typeof(NetworkCredential))
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        p.SetValue(cmd, null);
+                        return true;
+                    }
+
+                    var parts = value.Split(new[] { ':' }, 2);
+                    if (parts.Length != 2)
+                    {
+                        Console.WriteLine($@"--{this.DisplayName} must be in the format ""username:password"".");
+                        return false;
+                    }
+
+                    p.SetValue(cmd, new NetworkCredential(parts[0], parts[1]));
+                    return true;
+                }
+
+                throw new ArgumentException(p.PropertyType.FullName);
+            }
+        }
+
+        public sealed class PositionalArgument : Argument
+        {
+            internal PositionalArgument(PropertyInfo p) : base(p)
+            {
+            }
+
+            public int Index => p.GetCustomAttribute<PositionalArgumentAttribute>().Index;
+            public override bool Optional => p.GetCustomAttribute<PositionalArgumentAttribute>().Optional;
+
+            public override string GetUsage()
             {
                 var s = $"«{this.DisplayName}»";
 
@@ -54,33 +121,17 @@ namespace Inedo.ProGet.UPack
 
                 return s;
             }
-
-            public string GetHelp()
-            {
-                return $"{this.DisplayName} - {this.Description}";
-            }
-
-            public bool TrySetValue(Command cmd, string value)
-            {
-                throw new NotImplementedException();
-            }
         }
 
-        public sealed class ExtraArgument
+        public sealed class ExtraArgument : Argument
         {
-            private readonly PropertyInfo p;
-
-            public bool Optional => p.GetCustomAttribute<ExtraArgumentAttribute>().Optional;
-            public string DisplayName => p.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? p.Name;
-            public string Description => p.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty;
-            public object DefaultValue => p.GetCustomAttribute<DefaultValueAttribute>()?.Value;
-
-            internal ExtraArgument(PropertyInfo p)
+            internal ExtraArgument(PropertyInfo p) : base(p)
             {
-                this.p = p;
             }
 
-            public string GetUsage()
+            public override bool Optional => p.GetCustomAttribute<ExtraArgumentAttribute>().Optional;
+
+            public override string GetUsage()
             {
                 var s = $"--{this.DisplayName}=«{this.DisplayName}»";
 
@@ -95,16 +146,6 @@ namespace Inedo.ProGet.UPack
                 }
 
                 return s;
-            }
-
-            public string GetHelp()
-            {
-                return $"{this.DisplayName} - {this.Description}";
-            }
-
-            public bool TrySetValue(Command cmd, string value)
-            {
-                throw new NotImplementedException();
             }
         }
 
@@ -157,6 +198,132 @@ namespace Inedo.ProGet.UPack
             }
 
             return s.ToString();
+        }
+
+        internal static async Task<PackageMetadata> ReadManifestAsync(Stream metadataStream)
+        {
+            using (var metadata = new StreamReader(metadataStream))
+            {
+                return JsonConvert.DeserializeObject<PackageMetadata>(await metadata.ReadToEndAsync());
+            }
+        }
+
+        internal static void PrintManifest(PackageMetadata info)
+        {
+            Console.WriteLine($"Package: {info.Group}:{info.Name}");
+            Console.WriteLine($"Version: {info.Version}");
+        }
+
+        internal static async Task UnpackZipAsync(string targetDirectory, bool overwrite, ZipArchive zipFile)
+        {
+            Directory.CreateDirectory(targetDirectory);
+
+            var entries = zipFile.Entries.Where(e => e.FullName.StartsWith("package/", StringComparison.OrdinalIgnoreCase));
+
+            int files = 0;
+            int directories = 0;
+
+            foreach (var entry in entries)
+            {
+                var targetPath = Path.Combine(targetDirectory, entry.FullName.Substring("package/".Length).Replace('/', Path.DirectorySeparatorChar));
+
+                if (entry.FullName.EndsWith("/"))
+                {
+                    Directory.CreateDirectory(targetPath);
+                    directories++;
+                }
+                else
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+                    using (var entryStream = entry.Open())
+                    using (var targetStream = new FileStream(targetPath, overwrite ? FileMode.Create : FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    {
+                        await entryStream.CopyToAsync(targetStream);
+                    }
+
+                    files++;
+                }
+            }
+
+            Console.WriteLine($"Extracted {files} files and {directories} directories.");
+        }
+
+        internal static async Task CreateEntryFromFileAsync(ZipArchive zipFile, string fileName, string entryPath)
+        {
+            var entry = zipFile.CreateEntry(entryPath);
+
+            using (var input = new FileStream(fileName, FileMode.Open, FileAccess.Read))
+            using (var output = entry.Open())
+            {
+                await input.CopyToAsync(output);
+            }
+        }
+
+        internal static async Task AddDirectoryAsync(ZipArchive zipFile, string sourceDirectory, string entryRootPath)
+        {
+            bool hasContent = false;
+
+            foreach (var fileName in Directory.EnumerateFiles(sourceDirectory))
+            {
+                await CreateEntryFromFileAsync(zipFile, fileName, entryRootPath + Path.GetFileName(fileName));
+                hasContent = true;
+            }
+
+            foreach (var directoryName in Directory.EnumerateDirectories(sourceDirectory))
+            {
+                hasContent = true;
+                await AddDirectoryAsync(zipFile, directoryName, entryRootPath + Path.GetFileName(directoryName) + "/");
+            }
+
+            if (!hasContent)
+                zipFile.CreateEntry(entryRootPath + Path.GetFileName(sourceDirectory) + "/");
+        }
+
+        internal static async Task<string> FormatDownloadUrlAsync(string source, string packageName, string version, NetworkCredential credentials, bool prerelease)
+        {
+            var parts = packageName.Split(':');
+            string encodedName = Uri.EscapeUriString(parts[0]);
+            if (parts.Length > 1)
+                encodedName += '/' + Uri.EscapeUriString(parts[1]);
+
+            if (!string.IsNullOrEmpty(version) || !prerelease)
+            {
+                if (string.IsNullOrEmpty(version) || string.Equals(version, "latest", StringComparison.OrdinalIgnoreCase))
+                    return $"{source.TrimEnd('/')}/download/{encodedName}?latest";
+                else
+                    return $"{source.TrimEnd('/')}/download/{encodedName}/{Uri.EscapeDataString(version)}";
+            }
+            else
+            {
+                var legacyGroupParts = encodedName.Split('/');
+                var group = string.Empty;
+                if (legacyGroupParts.Length > 1)
+                {
+                    group = string.Join("%2f", legacyGroupParts.Take(legacyGroupParts.Length - 1));
+                    encodedName = legacyGroupParts.Last();
+                }
+
+                using (var client = CreateClient(credentials))
+                {
+                    using (var response = await client.GetAsync($"{source.TrimEnd('/')}/packages?group={group}&name={encodedName}"))
+                    {
+                        response.EnsureSuccessStatusCode();
+                        var metadata = JsonConvert.DeserializeObject<RemotePackageMetadata>(await response.Content.ReadAsStringAsync());
+                        var latestVersion = metadata.Versions.Select(UniversalPackageVersion.Parse).Max();
+                        return await FormatDownloadUrlAsync(source, packageName, latestVersion.ToString(), credentials, false);
+                    }
+                }
+            }
+        }
+
+        internal static HttpClient CreateClient(NetworkCredential credentials)
+        {
+            return new HttpClient(new HttpClientHandler
+            {
+                UseDefaultCredentials = credentials == null,
+                Credentials = credentials,
+                PreAuthenticate = true,
+            });
         }
     }
 }
