@@ -133,18 +133,18 @@ namespace Inedo.ProGet.UPack
 
         public void ShowGenericHelp()
         {
-            Console.WriteLine("Usage: upack «command»");
-            Console.WriteLine();
+            Console.Error.WriteLine("Usage: upack «command»");
+            Console.Error.WriteLine();
 
             foreach (var command in commands)
             {
-                Console.WriteLine($"{command.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? command.Name} - {command.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty}");
+                Console.Error.WriteLine($"{command.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? command.Name} - {command.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty}");
             }
         }
 
         public void ShowHelp(Command cmd)
         {
-            Console.WriteLine(cmd.GetHelp());
+            Console.Error.WriteLine(cmd.GetHelp());
         }
     }
 }
