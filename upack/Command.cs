@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Linq;
 using System.ComponentModel;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Reflection;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading.Tasks;
-using System.IO;
-using Newtonsoft.Json;
-using System.Net;
-using System.IO.Compression;
-using System.Net.Http;
 
 namespace Inedo.ProGet.UPack
 {
@@ -202,10 +202,8 @@ namespace Inedo.ProGet.UPack
 
         internal static async Task<PackageMetadata> ReadManifestAsync(Stream metadataStream)
         {
-            using (var metadata = new StreamReader(metadataStream))
-            {
-                return JsonConvert.DeserializeObject<PackageMetadata>(await metadata.ReadToEndAsync());
-            }
+            var serializer = new DataContractJsonSerializer(typeof(PackageMetadata));
+            return await Task.Run(() => (PackageMetadata)serializer.ReadObject(metadataStream));
         }
 
         internal static void PrintManifest(PackageMetadata info)
@@ -308,7 +306,8 @@ namespace Inedo.ProGet.UPack
                     using (var response = await client.GetAsync($"{source.TrimEnd('/')}/packages?group={group}&name={encodedName}"))
                     {
                         response.EnsureSuccessStatusCode();
-                        var metadata = JsonConvert.DeserializeObject<RemotePackageMetadata>(await response.Content.ReadAsStringAsync());
+                        var serializer = new DataContractJsonSerializer(typeof(RemotePackageMetadata));
+                        var metadata = (RemotePackageMetadata)serializer.ReadObject(await response.Content.ReadAsStreamAsync());
                         var latestVersion = metadata.Versions.Select(UniversalPackageVersion.Parse).Max();
                         return await FormatDownloadUrlAsync(source, packageName, latestVersion.ToString(), credentials, false);
                     }

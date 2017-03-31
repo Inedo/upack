@@ -1,22 +1,23 @@
-﻿using Newtonsoft.Json;
+﻿using System.Runtime.Serialization;
 
 namespace Inedo.ProGet.UPack
 {
+    [DataContract]
     internal sealed class PackageMetadata
     {
-        [JsonProperty(Required = Required.DisallowNull, PropertyName = "group")]
+        [DataMember(IsRequired = false, Name = "group")]
         public string Group { get; set; }
-        [JsonProperty(Required = Required.Always, PropertyName = "name")]
+        [DataMember(IsRequired = true, Name = "name")]
         public string Name { get; set; }
-        [JsonProperty(Required = Required.Always, PropertyName = "version")]
+        [DataMember(IsRequired = true, Name = "version")]
         public string Version { get; set; }
-        [JsonProperty(Required = Required.DisallowNull, PropertyName = "title")]
+        [DataMember(IsRequired = false, Name = "title")]
         public string Title { get; set; }
-        [JsonProperty(Required = Required.DisallowNull, PropertyName = "description")]
+        [DataMember(IsRequired = false, Name = "description")]
         public string Description { get; set; }
-        [JsonProperty(Required = Required.DisallowNull, PropertyName = "icon")]
+        [DataMember(IsRequired = false, Name = "icon")]
         public string IconUrl { get; set; }
-        [JsonProperty(Required = Required.DisallowNull, PropertyName = "dependencies")]
+        [DataMember(IsRequired = false, Name = "dependencies")]
         public string[] Dependencies { get; set; }
     }
 }

@@ -1,16 +1,17 @@
-﻿using Newtonsoft.Json;
+﻿using System.Runtime.Serialization;
 
 namespace Inedo.ProGet.UPack
 {
+    [DataContract]
     internal sealed class RemotePackageMetadata
     {
-        [JsonProperty(Required = Required.DisallowNull, PropertyName = "group")]
+        [DataMember(IsRequired = false, Name = "group")]
         public string Group { get; set; }
-        [JsonProperty(Required = Required.Always, PropertyName = "name")]
+        [DataMember(IsRequired = true, Name = "name")]
         public string Name { get; set; }
-        [JsonProperty(Required = Required.DisallowNull, PropertyName = "latestVersion")]
+        [DataMember(IsRequired = false, Name = "latestVersion")]
         public string LatestVersion { get; set; }
-        [JsonProperty(Required = Required.Always, PropertyName = "versions")]
+        [DataMember(IsRequired = true, Name = "versions")]
         public string[] Versions { get; set; }
     }
 }
