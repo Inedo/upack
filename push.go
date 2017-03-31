@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -77,7 +78,7 @@ func (cmd *pushCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...in
 
 	info.print()
 
-	req, err := http.NewRequest("PUT", f.Arg(1), zf)
+	req, err := http.NewRequest("PUT", f.Arg(1), ioutil.NopCloser(zf))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Preparing HTTP request:", err)
 		return subcommands.ExitFailure
