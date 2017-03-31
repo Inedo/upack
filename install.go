@@ -47,6 +47,7 @@ func (cmd *installCommand) SetFlags(f *flag.FlagSet) {
 
 func (cmd *installCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) (exit subcommands.ExitStatus) {
 	if f.NArg() < 1 || f.NArg() > 2 || cmd.sourceURL == "" || cmd.target == "" {
+		f.Usage()
 		return subcommands.ExitUsageError
 	}
 

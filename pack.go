@@ -35,6 +35,7 @@ func (cmd *packCommand) SetFlags(flagSet *flag.FlagSet) {
 
 func (cmd *packCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) (exit subcommands.ExitStatus) {
 	if f.NArg() != 2 {
+		f.Usage()
 		return subcommands.ExitUsageError
 	}
 
