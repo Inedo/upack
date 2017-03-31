@@ -59,31 +59,31 @@ func (cmd *installCommand) Execute(ctx context.Context, f *flag.FlagSet, args ..
 
 	url, err := formatDownloadURL(cmd.sourceURL, packageName, version, cmd.user, cmd.prerelease)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Preparing download URL:", err)
 		return subcommands.ExitFailure
 	}
 
 	tf, err := ioutil.TempFile("", "upack")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Creating temporary file:", err)
 		return subcommands.ExitFailure
 	}
 	defer func() {
 		if err := os.Remove(tf.Name()); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "Removing temporary file:", err)
 			exit = subcommands.ExitFailure
 		}
 	}()
 	defer func() {
 		if err := tf.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "Closing temporary file:", err)
 			exit = subcommands.ExitFailure
 		}
 	}()
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Preparing to download upack package:", err)
 		return subcommands.ExitFailure
 	}
 
@@ -91,12 +91,12 @@ func (cmd *installCommand) Execute(ctx context.Context, f *flag.FlagSet, args ..
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Downloading upack package:", err)
 		return subcommands.ExitFailure
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "Closing HTTP response:", err)
 			exit = subcommands.ExitFailure
 		}
 	}()
@@ -107,31 +107,31 @@ func (cmd *installCommand) Execute(ctx context.Context, f *flag.FlagSet, args ..
 	}
 	_, err = io.Copy(tf, resp.Body)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Copying upack package to a temporary file:", err)
 		return subcommands.ExitFailure
 	}
 
 	fi, err := tf.Stat()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Computing the size of the package:", err)
 		return subcommands.ExitFailure
 	}
 
 	zr, err := zip.NewReader(tf, fi.Size())
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Reading the package:", err)
 		return subcommands.ExitFailure
 	}
 
 	info, err := readZipMetadata(zr)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Reading upack metadata:", err)
 		return subcommands.ExitFailure
 	}
 	info.print()
 
 	if err = unpack(zr, cmd.overwrite, cmd.target); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Unpacking the package:", err)
 		return subcommands.ExitFailure
 	}
 

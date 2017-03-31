@@ -43,37 +43,37 @@ func (cmd *packCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...in
 
 	m, err := os.Open(f.Arg(0))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Opening package metadata:", err)
 		return subcommands.ExitFailure
 	}
 	defer func() {
 		if err := m.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "Closing package metadata:", err)
 			exit = subcommands.ExitFailure
 		}
 	}()
 
 	if err = json.NewDecoder(m).Decode(&info); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Reading package metadata:", err)
 		return subcommands.ExitFailure
 	}
 
 	info.print()
 
 	if _, err = m.Seek(0, io.SeekStart); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Rewinding package metadata:", err)
 		return subcommands.ExitFailure
 	}
 
 	fileName := filepath.Join(cmd.target, info.Name+"-"+info.Version+".upack")
 	zf, err := os.OpenFile(fileName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Creating upack file:", err)
 		return subcommands.ExitFailure
 	}
 	defer func() {
 		if err := zf.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "Closing upack file:", err)
 			exit = subcommands.ExitFailure
 		}
 	}()
@@ -81,18 +81,18 @@ func (cmd *packCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...in
 	zw := zip.NewWriter(zf)
 	defer func() {
 		if err := zw.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "Finishing writing upack file:", err)
 			exit = subcommands.ExitFailure
 		}
 	}()
 
 	if err := createEntryFromFile(zw, f.Arg(0), "upack.json"); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Writing package metadata:", err)
 		return subcommands.ExitFailure
 	}
 
 	if err := addDirectory(zw, f.Arg(1), "package/"); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Writing package:", err)
 		return subcommands.ExitFailure
 	}
 

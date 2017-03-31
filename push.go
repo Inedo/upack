@@ -41,37 +41,37 @@ func (cmd *pushCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...in
 
 	zf, err := os.Open(f.Arg(0))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Opening upack file:", err)
 		return subcommands.ExitFailure
 	}
 	defer func() {
 		if err := zf.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "Closing upack file:", err)
 			exit = subcommands.ExitFailure
 		}
 	}()
 
 	fi, err := zf.Stat()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Computing size of upack file:", err)
 		return subcommands.ExitFailure
 	}
 
 	zr, err := zip.NewReader(zf, fi.Size())
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Reading upack file:", err)
 		return subcommands.ExitFailure
 	}
 
 	info, err := readZipMetadata(zr)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Reading package metadata:", err)
 		return subcommands.ExitFailure
 	}
 
 	_, err = zf.Seek(0, io.SeekStart)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Rewinding upack file:", err)
 		return subcommands.ExitFailure
 	}
 
@@ -79,7 +79,7 @@ func (cmd *pushCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...in
 
 	req, err := http.NewRequest("PUT", f.Arg(1), zf)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Preparing HTTP request:", err)
 		return subcommands.ExitFailure
 	}
 
@@ -88,12 +88,12 @@ func (cmd *pushCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...in
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Sending HTTP request:", err)
 		return subcommands.ExitFailure
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(os.Stderr, "Closing HTTP response:", err)
 			exit = subcommands.ExitFailure
 		}
 	}()
@@ -106,7 +106,7 @@ func (cmd *pushCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...in
 	fmt.Fprintf(os.Stderr, "upack API returned %s\n", resp.Status)
 	_, err = io.Copy(os.Stderr, resp.Body)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Reading error data:", err)
 	}
 	return subcommands.ExitFailure
 

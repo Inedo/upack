@@ -43,20 +43,20 @@ func (cmd *unpackCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...
 
 	zr, err := zip.OpenReader(f.Arg(0))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Opening package:", err)
 		return subcommands.ExitFailure
 	}
 
 	info, err := readZipMetadata(&zr.Reader)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Reading package metadata:", err)
 		return subcommands.ExitFailure
 	}
 
 	info.print()
 
 	if err = unpack(&zr.Reader, cmd.overwrite, f.Arg(1)); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "Unpacking package:", err)
 		return subcommands.ExitFailure
 	}
 
