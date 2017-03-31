@@ -123,7 +123,7 @@ namespace Inedo.ProGet.UPack
                 {
                     ShowGenericHelp();
                 }
-                Environment.ExitCode = 1;
+                Environment.ExitCode = 2;
             }
             else
             {
