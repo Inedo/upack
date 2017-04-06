@@ -63,7 +63,8 @@ namespace Inedo.ProGet.UPack
                         p.SetValue(cmd, true);
                         return true;
                     }
-                    if (bool.TryParse(value, out bool result))
+                    bool result;
+                    if (bool.TryParse(value, out result))
                     {
                         p.SetValue(cmd, result);
                         return true;
