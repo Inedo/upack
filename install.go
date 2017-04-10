@@ -38,7 +38,7 @@ func (cmd *installCommand) Usage() string {
 }
 
 func (cmd *installCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&cmd.sourceURL, "sourceUrl", "", "URL of a upack API endpoint.")
+	f.StringVar(&cmd.sourceURL, "source", "", "URL of a upack API endpoint.")
 	f.StringVar(&cmd.target, "target", "", "Directory where the contents of the package will be extracted.")
 	f.StringVar(&cmd.user, "user", "", "User name and password to use for servers that require authentication. Example: username:password")
 	f.BoolVar(&cmd.overwrite, "overwrite", false, "When specified, Overwrite files in the target directory.")

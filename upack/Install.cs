@@ -21,7 +21,7 @@ namespace Inedo.ProGet.UPack
         [PositionalArgument(1, Optional = true)]
         public string Version { get; set; }
 
-        [DisplayName("sourceUrl")]
+        [DisplayName("source")]
         [Description("URL of a upack API endpoint.")]
         [ExtraArgument(Optional = false)]
         public string SourceUrl { get; set; }
