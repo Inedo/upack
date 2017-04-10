@@ -58,62 +58,65 @@ namespace Inedo.ProGet.UPack
                 foreach (var command in commands)
                 {
                     cmd = (Command)command.GetConstructor(new Type[0]).Invoke(new object[0]);
-                    if (cmd.DisplayName.Equals(positional[0], StringComparison.OrdinalIgnoreCase))
+                    if (!string.Equals(cmd.DisplayName, positional[0], StringComparison.OrdinalIgnoreCase))
                     {
-                        if (hadError)
-                        {
-                            break;
-                        }
+                        cmd = null;
+                        continue;
+                    }
 
-                        positional.RemoveAt(0);
-
-                        foreach (var arg in cmd.PositionalArguments)
-                        {
-                            if (arg.Index < positional.Count)
-                            {
-                                if (!arg.TrySetValue(cmd, positional[arg.Index]))
-                                {
-                                    hadError = true;
-                                }
-                            }
-                            else if (!arg.Optional)
-                            {
-                                hadError = true;
-                            }
-                        }
-
-                        if (positional.Count > cmd.PositionalArguments.Count())
-                        {
-                            hadError = true;
-                        }
-
-                        foreach (var arg in cmd.ExtraArguments)
-                        {
-                            if (extra.ContainsKey(arg.DisplayName))
-                            {
-                                if (!arg.TrySetValue(cmd, extra[arg.DisplayName]))
-                                {
-                                    hadError = true;
-                                }
-                                extra.Remove(arg.DisplayName);
-                            }
-                            else if (!arg.Optional)
-                            {
-                                hadError = true;
-                            }
-                        }
-
-                        if (extra.Count != 0)
-                        {
-                            hadError = true;
-                        }
-
+                    if (hadError)
+                    {
                         break;
                     }
+
+                    positional.RemoveAt(0);
+
+                    foreach (var arg in cmd.PositionalArguments)
+                    {
+                        if (arg.Index < positional.Count)
+                        {
+                            if (!arg.TrySetValue(cmd, positional[arg.Index]))
+                            {
+                                hadError = true;
+                            }
+                        }
+                        else if (!arg.Optional)
+                        {
+                            hadError = true;
+                        }
+                    }
+
+                    if (positional.Count > cmd.PositionalArguments.Count())
+                    {
+                        hadError = true;
+                    }
+
+                    foreach (var arg in cmd.ExtraArguments)
+                    {
+                        if (extra.ContainsKey(arg.DisplayName))
+                        {
+                            if (!arg.TrySetValue(cmd, extra[arg.DisplayName]))
+                            {
+                                hadError = true;
+                            }
+                            extra.Remove(arg.DisplayName);
+                        }
+                        else if (!arg.Optional)
+                        {
+                            hadError = true;
+                        }
+                    }
+
+                    if (extra.Count != 0)
+                    {
+                        hadError = true;
+                    }
+
+                    break;
                 }
             }
 
-            if (hadError)
+            if (hadError || cmd == null)
             {
                 if (cmd != null)
                 {
