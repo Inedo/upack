@@ -136,6 +136,7 @@ namespace Inedo.ProGet.UPack
 
         public void ShowGenericHelp()
         {
+            Console.Error.WriteLine($"upack {typeof(CommandDispatcher).Assembly.GetName().Version}");
             Console.Error.WriteLine("Usage: upack «command»");
             Console.Error.WriteLine();
 
