@@ -90,7 +90,8 @@ namespace Inedo.ProGet.UPack
 			return a.Major == b.Major
 			       && a.Minor == b.Minor
 			       && a.Patch == b.Patch
-			       && string.Equals(a.Prerelease, b.Prerelease, StringComparison.OrdinalIgnoreCase);
+			       && string.Equals(a.Prerelease, b.Prerelease, StringComparison.OrdinalIgnoreCase)
+				   && string.Equals(a.Build, b.Build, StringComparison.OrdinalIgnoreCase);
 		}
 
 		private static int ComparePrerelease(string a, string b)
@@ -173,7 +174,7 @@ namespace Inedo.ProGet.UPack
 				return leftNumeric.CompareTo(rightNumeric);
 			}
 
-			return string.CompareOrdinal(a, b);
+			return string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
 		}
 
 		public static int Compare(UniversalPackageVersion a, UniversalPackageVersion b)
