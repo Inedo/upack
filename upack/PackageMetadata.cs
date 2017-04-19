@@ -19,5 +19,16 @@ namespace Inedo.ProGet.UPack
         public string IconUrl { get; set; }
         [DataMember(IsRequired = false, Name = "dependencies")]
         public string[] Dependencies { get; set; }
+
+        public string BareVersion
+		{
+            get
+            {
+                var packageVersion = UniversalPackageVersion.TryParse(Version);
+                return packageVersion != null
+                    ? $"{packageVersion.Major}.{packageVersion.Minor}.{packageVersion.Patch}"
+                    : Version;
+            }
+        }
     }
 }

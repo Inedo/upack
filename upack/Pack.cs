@@ -38,7 +38,7 @@ namespace Inedo.ProGet.UPack
 
             PrintManifest(info);
 
-            var fileName = Path.Combine(this.TargetDirectory, $"{info.Name}-{info.Version}.upack");
+            var fileName = Path.Combine(this.TargetDirectory, $"{info.Name}-{info.BareVersion}.upack");
             using (var zipStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
             using (var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
             {
