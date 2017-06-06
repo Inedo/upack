@@ -48,33 +48,85 @@ namespace Inedo.ProGet.UPack
         [DefaultValue(false)]
         public bool Prerelease { get; set; } = false;
 
+        [DisplayName("comment")]
+        [Description("The reason for installing the package, for the local registry.")]
+        [ExtraArgument]
+        public string Comment { get; set; }
+
+        [DisplayName("userregistry")]
+        [Description("Cache the package in the user registry instead of the machine registry.")]
+        [ExtraArgument]
+        [DefaultValue(false)]
+        public bool UserRegistry { get; set; } = false;
+
+        [DisplayName("unregistered")]
+        [Description("Do not cache the package in a local registry.")]
+        [ExtraArgument]
+        [DefaultValue(false)]
+        public bool Unregistered { get; set; } = false;
+
         public override async Task<int> RunAsync()
         {
-            var url = await FormatDownloadUrlAsync(this.SourceUrl, this.PackageName, this.Version, this.Authentication, this.Prerelease);
-
-            var tempFileName = Path.GetTempFileName();
-
-            using (var tempStream = new FileStream(tempFileName, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
+            using (var stream = await this.OpenPackageAsync())
             {
+                using (var zip = new ZipArchive(stream, ZipArchiveMode.Read, true))
+                {
+                    await UnpackZipAsync(this.TargetDirectory, this.Overwrite, zip);
+                }
+            }
+
+            return 0;
+        }
+
+        private async Task<Stream> OpenPackageAsync()
+        {
+            if (this.Unregistered)
+            {
+                var url = await FormatDownloadUrlAsync(this.SourceUrl, this.PackageName, this.Version, this.Authentication, this.Prerelease);
+
                 using (var client = CreateClient(this.Authentication))
                 {
                     using (var response = await client.GetAsync(url))
                     {
                         response.EnsureSuccessStatusCode();
 
-                        await response.Content.CopyToAsync(tempStream);
+                        var tempFileName = Path.GetTempFileName();
 
-                        tempStream.Position = 0;
+                        var tempStream = new FileStream(tempFileName, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
 
-                        using (var zip = new ZipArchive(tempStream, ZipArchiveMode.Read, true))
+                        try
                         {
-                            await UnpackZipAsync(this.TargetDirectory, this.Overwrite, zip);
+                            await response.Content.CopyToAsync(tempStream);
+
+                            tempStream.Position = 0;
+
+                            return tempStream;
+                        }
+                        catch
+                        {
+                            try
+                            {
+                                tempStream.Dispose();
+                            }
+                            catch
+                            {
+                            }
+
+                            throw;
                         }
                     }
                 }
             }
 
-            return 0;
+            var parts = this.PackageName.Split(new[] { ':' }, 2, StringSplitOptions.None);
+            var group = parts.Length > 1 ? parts[0] : null;
+            var name = parts[parts.Length - 1];
+
+            var version = await GetVersionAsync(this.SourceUrl, group, name, this.Version, this.Authentication, this.Prerelease);
+
+            return await (this.UserRegistry ? Registry.User : Registry.Machine).GetOrDownloadPackageAsync(group, name, UniversalPackageVersion.Parse(version),
+                this.TargetDirectory, this.SourceUrl, this.Authentication,
+                this.Comment, null, Environment.UserName);
         }
     }
 }
