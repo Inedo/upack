@@ -2,189 +2,237 @@ package main
 
 import (
 	"archive/zip"
-	"context"
-	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
+	"os/user"
 	"strings"
-
-	"github.com/google/subcommands"
 )
 
-type installCommand struct {
-	sourceURL  string
-	target     string
-	user       string
-	overwrite  bool
-	prerelease bool
+type Install struct {
+	PackageName     string
+	Version         string
+	SourceURL       string
+	TargetDirectory string
+	Authentication  *[2]string
+	Overwrite       bool
+	Prerelease      bool
+	Comment         *string
+	UserRegistry    bool
+	Unregistered    bool
 }
 
-func (cmd *installCommand) Name() string { return "install" }
-
-func (cmd *installCommand) Synopsis() string {
+func (*Install) Name() string { return "install" }
+func (*Install) Description() string {
 	return "Downloads the specified ProGet universal package and extracts its contents to a directory."
 }
 
-func (cmd *installCommand) Usage() string {
-	return "upack install «package» [«version»] --source=«sourceUrl»\n" +
-		"    --target=«targetDirectory» [--user=«authentication»] [--overwrite]\n\n" +
-		"package: Package name and group, such as group:name.\n" +
-		"version: Package version. If not specified, the latest version is retrieved.\n"
+func (i *Install) Help() string  { return defaultCommandHelp(i) }
+func (i *Install) Usage() string { return defaultCommandUsage(i) }
+
+func (*Install) PositionalArguments() []PositionalArgument {
+	return []PositionalArgument{
+		{
+			Name:        "package",
+			Description: "Package name and group, such as group:name.",
+			Index:       0,
+			TrySetValue: trySetStringValue("package", func(cmd Command) *string {
+				return &cmd.(*Install).PackageName
+			}),
+		},
+		{
+			Name:        "version",
+			Description: "Package version. If not specified, the latest version is retrieved.",
+			Index:       1,
+			Optional:    true,
+			TrySetValue: trySetStringValue("version", func(cmd Command) *string {
+				return &cmd.(*Install).Version
+			}),
+		},
+	}
 }
 
-func (cmd *installCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&cmd.sourceURL, "source", "", "URL of a upack API endpoint.")
-	f.StringVar(&cmd.target, "target", "", "Directory where the contents of the package will be extracted.")
-	f.StringVar(&cmd.user, "user", "", "User name and password to use for servers that require authentication. Example: username:password")
-	f.BoolVar(&cmd.overwrite, "overwrite", false, "When specified, Overwrite files in the target directory.")
-	f.BoolVar(&cmd.prerelease, "prerelease", false, "When version is not specified, will install the latest prerelase version instead of the latest stable version.")
+func (*Install) ExtraArguments() []ExtraArgument {
+	return []ExtraArgument{
+		{
+			Name:        "source",
+			Description: "URL of a upack API endpoint.",
+			Required:    true,
+			TrySetValue: trySetStringValue("source", func(cmd Command) *string {
+				return &cmd.(*Install).SourceURL
+			}),
+		},
+		{
+			Name:        "target",
+			Description: "Directory where the contents of the package will be extracted.",
+			Required:    true,
+			TrySetValue: trySetStringValue("target", func(cmd Command) *string {
+				return &cmd.(*Install).TargetDirectory
+			}),
+		},
+		{
+			Name:        "user",
+			Description: "User name and password to use for servers that require authentication. Example: username:password",
+			TrySetValue: trySetBasicAuthValue("user", func(cmd Command) **[2]string {
+				return &cmd.(*Install).Authentication
+			}),
+		},
+		{
+			Name:        "overwrite",
+			Description: "When specified, Overwrite files in the target directory.",
+			Flag:        true,
+			TrySetValue: trySetBoolValue("overwrite", func(cmd Command) *bool {
+				return &cmd.(*Install).Overwrite
+			}),
+		},
+		{
+			Name:        "prerelease",
+			Description: "When version is not specified, will install the latest prerelase version instead of the latest stable version.",
+			Flag:        true,
+			TrySetValue: trySetBoolValue("prerelease", func(cmd Command) *bool {
+				return &cmd.(*Install).Prerelease
+			}),
+		},
+		{
+			Name:        "comment",
+			Description: "The reason for installing the package, for the local registry.",
+			TrySetValue: trySetStringValue("comment", func(cmd Command) *string {
+				s := new(string)
+				cmd.(*Install).Comment = s
+				return s
+			}),
+		},
+		{
+			Name:        "userregistry",
+			Description: "Cache the package in the user registry instead of the machine registry.",
+			Flag:        true,
+			TrySetValue: trySetBoolValue("userregistry", func(cmd Command) *bool {
+				return &cmd.(*Install).UserRegistry
+			}),
+		},
+		{
+			Name:        "unregistered",
+			Description: "Do not cache the package in a local registry.",
+			Flag:        true,
+			TrySetValue: trySetBoolValue("unregistered", func(cmd Command) *bool {
+				return &cmd.(*Install).Unregistered
+			}),
+		},
+	}
 }
 
-func (cmd *installCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) (exit subcommands.ExitStatus) {
-	if f.NArg() < 1 || f.NArg() > 2 || cmd.sourceURL == "" || cmd.target == "" {
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-
-	packageName := f.Arg(0)
-	var version string
-	if f.NArg() >= 2 {
-		version = f.Arg(1)
-	}
-
-	url, err := formatDownloadURL(cmd.sourceURL, packageName, version, cmd.user, cmd.prerelease)
+func (i *Install) Run() int {
+	r, size, done, err := i.OpenPackage()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Preparing download URL:", err)
-		return subcommands.ExitFailure
+		fmt.Fprintln(os.Stderr, err)
+		return 1
 	}
+	defer done()
 
-	tf, err := ioutil.TempFile("", "upack")
+	zip, err := zip.NewReader(r, size)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Creating temporary file:", err)
-		return subcommands.ExitFailure
+		fmt.Fprintln(os.Stderr, err)
+		return 1
 	}
-	defer func() {
-		if err := os.Remove(tf.Name()); err != nil {
-			fmt.Fprintln(os.Stderr, "Removing temporary file:", err)
-			exit = subcommands.ExitFailure
-		}
-	}()
-	defer func() {
-		if err := tf.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, "Closing temporary file:", err)
-			exit = subcommands.ExitFailure
-		}
-	}()
 
-	req, err := http.NewRequest("GET", url, nil)
+	err = UnpackZip(i.TargetDirectory, i.Overwrite, zip)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Preparing to download upack package:", err)
-		return subcommands.ExitFailure
+		fmt.Fprintln(os.Stderr, err)
+		return 1
 	}
 
-	setBasicAuth(req, cmd.user)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Downloading upack package:", err)
-		return subcommands.ExitFailure
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, "Closing HTTP response:", err)
-			exit = subcommands.ExitFailure
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Fprintf(os.Stderr, "upack API returned %s\n", resp.Status)
-		return subcommands.ExitFailure
-	}
-	_, err = io.Copy(tf, resp.Body)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Copying upack package to a temporary file:", err)
-		return subcommands.ExitFailure
-	}
-
-	fi, err := tf.Stat()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Computing the size of the package:", err)
-		return subcommands.ExitFailure
-	}
-
-	zr, err := zip.NewReader(tf, fi.Size())
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Reading the package:", err)
-		return subcommands.ExitFailure
-	}
-
-	info, err := readZipMetadata(zr)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Reading upack metadata:", err)
-		return subcommands.ExitFailure
-	}
-	info.print()
-
-	if err = unpack(zr, cmd.overwrite, cmd.target); err != nil {
-		fmt.Fprintln(os.Stderr, "Unpacking the package:", err)
-		return subcommands.ExitFailure
-	}
-
-	return subcommands.ExitSuccess
+	return 0
 }
 
-func formatDownloadURL(source, packageName, version, credentials string, prerelease bool) (s string, err error) {
-	parts := strings.Split(packageName, ":")
-	encodedName := url.PathEscape(parts[0])
-	if len(parts) > 1 {
-		encodedName += "/" + url.PathEscape(parts[1])
-	}
-
-	if version != "" || !prerelease {
-		if version == "" || strings.EqualFold(version, "latest") {
-			return strings.TrimRight(source, "/") + "/download/" + encodedName + "?latest", nil
+func (i *Install) OpenPackage() (io.ReaderAt, int64, func() error, error) {
+	if i.Unregistered {
+		url, err := FormatDownloadURL(i.SourceURL, i.PackageName, i.Version, i.Authentication, i.Prerelease)
+		if err != nil {
+			return nil, 0, nil, err
 		}
-		return strings.TrimRight(source, "/") + "/download/" + encodedName + "/" + url.QueryEscape(version), nil
-	}
-	legacyGroupParts := strings.Split(encodedName, "/")
-	group := ""
-	if len(legacyGroupParts) > 1 {
-		group = strings.Join(legacyGroupParts[:len(legacyGroupParts)-1], "%2f")
-		encodedName = legacyGroupParts[len(legacyGroupParts)-1]
-	}
 
-	req, err := http.NewRequest("GET", strings.TrimRight(source, "/")+"/packages?group="+group+"&name="+encodedName, nil)
-	if err != nil {
-		return
-	}
-
-	setBasicAuth(req, credentials)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer func() {
-		if e := resp.Body.Close(); err == nil {
-			err = e
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, 0, nil, err
 		}
-	}()
 
-	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("upack API returned %s", resp.Status)
-		return
+		if i.Authentication != nil {
+			req.SetBasicAuth(i.Authentication[0], i.Authentication[1])
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, 0, nil, err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode >= 400 {
+			return nil, 0, nil, fmt.Errorf("GET %q returned %s", url, resp.Status)
+		}
+
+		f, err := ioutil.TempFile("", "upack")
+		if err != nil {
+			return nil, 0, nil, err
+		}
+		fName := f.Name()
+
+		n, err := io.Copy(f, resp.Body)
+		if err != nil {
+			_ = f.Close()
+			_ = os.Remove(fName)
+			return nil, 0, nil, err
+		}
+
+		return f, n, func() error {
+			err := f.Close()
+			if e := os.Remove(fName); err == nil {
+				err = e
+			}
+			return err
+		}, nil
 	}
 
-	var data remotePackageMetadata
-	err = json.NewDecoder(resp.Body).Decode(&data)
+	parts := strings.SplitN(i.PackageName, ":", 2)
+	var group, name string
+	if len(parts) == 1 {
+		name = parts[0]
+	} else {
+		group = parts[0]
+		name = parts[1]
+	}
+
+	versionString, err := GetVersion(i.SourceURL, group, name, i.Version, i.Authentication, i.Prerelease)
 	if err != nil {
-		return
+		return nil, 0, nil, err
+	}
+	version, err := ParseUniversalPackageVersion(versionString)
+	if err != nil {
+		return nil, 0, nil, err
 	}
 
-	return formatDownloadURL(source, packageName, data.latestPrereleaseVersion(), credentials, false)
+	r := Machine
+	if i.UserRegistry {
+		r = User
+	}
+
+	var userName *string
+	u, err := user.Current()
+	if err == nil {
+		userName = &u.Username
+	}
+
+	f, err := r.GetOrDownloadPackage(group, name, version, i.TargetDirectory, i.SourceURL, i.Authentication, i.Comment, nil, userName)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	fi, err := f.Stat()
+	if err != nil {
+		_ = f.Close()
+		return nil, 0, nil, err
+	}
+
+	return f, fi.Size(), f.Close, nil
 }

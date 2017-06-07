@@ -177,7 +177,7 @@ namespace Inedo.ProGet.UPack
 
                     packages.Add(package);
 
-                    using (var stream = new FileStream(Path.Combine(path, "installedPackages.json"), FileMode.Open, FileAccess.Write))
+                    using (var stream = new FileStream(Path.Combine(path, "installedPackages.json"), FileMode.Create, FileAccess.Write))
                     {
                         serializer.WriteObject(stream, packages);
                     }
