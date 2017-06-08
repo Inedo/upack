@@ -37,6 +37,31 @@ var (
 	}()
 )
 
+func (r Registry) retry(task func() error) error {
+	var err error
+
+	for tries := 0; tries < 1000; tries++ {
+		err = task()
+		if err == nil {
+			return nil
+		}
+
+		if _, ok := err.(RegistryLocked); !ok {
+			return err
+		}
+
+		fmt.Fprint(os.Stderr, err)
+		time.Sleep(time.Second)
+		fmt.Fprint(os.Stderr, ".")
+		time.Sleep(time.Second)
+		fmt.Fprint(os.Stderr, ".")
+		time.Sleep(time.Second)
+		fmt.Fprintln(os.Stderr, ".")
+	}
+
+	return err
+}
+
 func (r Registry) withLock(task func() error, description string) (err error) {
 	if description != "" && strings.Contains(description, "\n") {
 		return errors.New("description must not contain line breaks")
@@ -56,6 +81,9 @@ func (r Registry) withLock(task func() error, description string) (err error) {
 
 		fi, err := os.Stat(lockPath)
 		if err != nil {
+			if os.IsNotExist(err) {
+				return RegistryLocked{"Registry lock deleted while checking for lock."}
+			}
 			return err
 		}
 		lastWrite := fi.ModTime()
@@ -125,6 +153,12 @@ func (r Registry) withLock(task func() error, description string) (err error) {
 	return task()
 }
 
+type RegistryLocked struct {
+	Err string
+}
+
+func (err RegistryLocked) Error() string { return err.Err }
+
 func registryLocked(lockPath string) error {
 	b, err := ioutil.ReadFile(lockPath)
 	if err != nil {
@@ -138,22 +172,24 @@ func registryLocked(lockPath string) error {
 	if lockDescription == "" {
 		lockDescription = "No description provided."
 	}
-	return errors.New("Registry is locked: " + lockDescription)
+	return RegistryLocked{"Registry is locked: " + lockDescription}
 }
 
 func (r Registry) ListInstalledPackages() ([]*InstalledPackage, error) {
 	var installedPackages []*InstalledPackage
-	err := r.withLock(func() error {
-		f, err := os.Open(filepath.Join(string(r), "installedPackages.json"))
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil
+	err := r.retry(func() error {
+		return r.withLock(func() error {
+			f, err := os.Open(filepath.Join(string(r), "installedPackages.json"))
+			if err != nil {
+				if os.IsNotExist(err) {
+					return nil
+				}
+				return err
 			}
-			return err
-		}
-		defer f.Close()
-		return json.NewDecoder(f).Decode(&installedPackages)
-	}, "listing installed packages")
+			defer f.Close()
+			return json.NewDecoder(f).Decode(&installedPackages)
+		}, "listing installed packages")
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -164,60 +200,61 @@ func (r Registry) getCachedPackagePath(group, name string, version *UniversalPac
 	return filepath.Join(string(r), "packageCache", strings.Replace(group, "/", "$", -1)+"$"+name, name+"."+version.String()+".upack")
 }
 
-func (r Registry) GetOrDownloadPackage(group, name string, version *UniversalPackageVersion, intendedPath, feedURL string, feedAuthentication *[2]string, installationReason, installedUsing, installedBy *string) (*os.File, error) {
-	err := r.withLock(func() error {
-		var packages []*InstalledPackage
-		f, err := os.Open(filepath.Join(string(r), "installedPackages.json"))
-		if err == nil {
-			err = json.NewDecoder(f).Decode(&packages)
-			if err != nil {
-				_ = f.Close()
+func (r Registry) RegisterPackage(group, name string, version *UniversalPackageVersion, intendedPath, feedURL string, feedAuthentication *[2]string, installationReason, installedUsing, installedBy *string) error {
+	return r.retry(func() error {
+		return r.withLock(func() error {
+			var packages []*InstalledPackage
+			f, err := os.Open(filepath.Join(string(r), "installedPackages.json"))
+			if err == nil {
+				err = json.NewDecoder(f).Decode(&packages)
+				if err != nil {
+					_ = f.Close()
+					return err
+				}
+				err = f.Close()
+				if err != nil {
+					return err
+				}
+			} else if !os.IsNotExist(err) {
 				return err
 			}
-			err = f.Close()
+
+			for _, pkg := range packages {
+				if strings.EqualFold(pkg.Group, group) && strings.EqualFold(pkg.Name, name) && pkg.Version.Equals(version) {
+					return nil
+				}
+			}
+
+			if installedUsing == nil {
+				installedUsing = new(string)
+				*installedUsing = "upack/" + Version
+			}
+
+			packages = append(packages, &InstalledPackage{
+				Group:              group,
+				Name:               name,
+				Version:            version,
+				Path:               &intendedPath,
+				FeedURL:            &feedURL,
+				InstallationDate:   &InstalledPackageDate{time.Now().UTC()},
+				InstallationReason: installationReason,
+				InstalledUsing:     installedUsing,
+				InstalledBy:        installedBy,
+			})
+
+			f, err = os.Create(filepath.Join(string(r), "installedPackages.json"))
 			if err != nil {
 				return err
 			}
-		} else if !os.IsNotExist(err) {
+			defer f.Close()
+
+			err = json.NewEncoder(f).Encode(&packages)
 			return err
-		}
+		}, "checking installation status of "+group+"/"+name+" "+version.String())
+	})
+}
 
-		for _, pkg := range packages {
-			if strings.EqualFold(pkg.Group, group) && strings.EqualFold(pkg.Name, name) && pkg.Version.Equals(version) {
-				return nil
-			}
-		}
-
-		if installedUsing == nil {
-			installedUsing = new(string)
-			*installedUsing = "upack/" + Version
-		}
-
-		packages = append(packages, &InstalledPackage{
-			Group:              group,
-			Name:               name,
-			Version:            version,
-			Path:               &intendedPath,
-			FeedURL:            &feedURL,
-			InstallationDate:   &InstalledPackageDate{time.Now().UTC()},
-			InstallationReason: installationReason,
-			InstalledUsing:     installedUsing,
-			InstalledBy:        installedBy,
-		})
-
-		f, err = os.Create(filepath.Join(string(r), "installedPackages.json"))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		err = json.NewEncoder(f).Encode(&packages)
-		return err
-	}, "checking installation status of "+group+"/"+name+" "+version.String())
-	if err != nil {
-		return nil, err
-	}
-
+func (r Registry) GetOrDownload(group, name string, version *UniversalPackageVersion, feedURL string, feedAuthentication *[2]string) (*os.File, error) {
 	cachePath := r.getCachedPackagePath(group, name, version)
 
 	f, err := os.Open(cachePath)

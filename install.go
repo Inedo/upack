@@ -22,6 +22,7 @@ type Install struct {
 	Comment         *string
 	UserRegistry    bool
 	Unregistered    bool
+	CachePackages   bool
 }
 
 func (*Install) Name() string { return "install" }
@@ -106,7 +107,7 @@ func (*Install) ExtraArguments() []ExtraArgument {
 		},
 		{
 			Name:        "userregistry",
-			Description: "Cache the package in the user registry instead of the machine registry.",
+			Description: "Register the package in the user registry instead of the machine registry.",
 			Flag:        true,
 			TrySetValue: trySetBoolValue("userregistry", func(cmd Command) *bool {
 				return &cmd.(*Install).UserRegistry
@@ -114,10 +115,18 @@ func (*Install) ExtraArguments() []ExtraArgument {
 		},
 		{
 			Name:        "unregistered",
-			Description: "Do not cache the package in a local registry.",
+			Description: "Do not register the package in a local registry.",
 			Flag:        true,
 			TrySetValue: trySetBoolValue("unregistered", func(cmd Command) *bool {
 				return &cmd.(*Install).Unregistered
+			}),
+		},
+		{
+			Name:        "cache",
+			Description: "Cache the contents of the package in the local registry.",
+			Flag:        true,
+			TrySetValue: trySetBoolValue("cache", func(cmd Command) *bool {
+				return &cmd.(*Install).CachePackages
 			}),
 		},
 	}
@@ -147,7 +156,47 @@ func (i *Install) Run() int {
 }
 
 func (i *Install) OpenPackage() (io.ReaderAt, int64, func() error, error) {
-	if i.Unregistered {
+	var r Registry
+	var group, name string
+	var version *UniversalPackageVersion
+
+	if !i.Unregistered {
+		parts := strings.SplitN(i.PackageName, ":", 2)
+		if len(parts) == 1 {
+			name = parts[0]
+		} else {
+			group = parts[0]
+			name = parts[1]
+		}
+
+		versionString, err := GetVersion(i.SourceURL, group, name, i.Version, i.Authentication, i.Prerelease)
+		if err != nil {
+			return nil, 0, nil, err
+		}
+		version, err = ParseUniversalPackageVersion(versionString)
+		if err != nil {
+			return nil, 0, nil, err
+		}
+
+		var userName *string
+		u, err := user.Current()
+		if err == nil {
+			userName = &u.Username
+		}
+
+		if i.UserRegistry {
+			r = User
+		} else {
+			r = Machine
+		}
+
+		err = r.RegisterPackage(group, name, version, i.TargetDirectory, i.SourceURL, i.Authentication, i.Comment, nil, userName)
+		if err != nil {
+			return nil, 0, nil, err
+		}
+	}
+
+	if i.Unregistered || !i.CachePackages {
 		url, err := FormatDownloadURL(i.SourceURL, i.PackageName, i.Version, i.Authentication, i.Prerelease)
 		if err != nil {
 			return nil, 0, nil, err
@@ -194,36 +243,7 @@ func (i *Install) OpenPackage() (io.ReaderAt, int64, func() error, error) {
 		}, nil
 	}
 
-	parts := strings.SplitN(i.PackageName, ":", 2)
-	var group, name string
-	if len(parts) == 1 {
-		name = parts[0]
-	} else {
-		group = parts[0]
-		name = parts[1]
-	}
-
-	versionString, err := GetVersion(i.SourceURL, group, name, i.Version, i.Authentication, i.Prerelease)
-	if err != nil {
-		return nil, 0, nil, err
-	}
-	version, err := ParseUniversalPackageVersion(versionString)
-	if err != nil {
-		return nil, 0, nil, err
-	}
-
-	r := Machine
-	if i.UserRegistry {
-		r = User
-	}
-
-	var userName *string
-	u, err := user.Current()
-	if err == nil {
-		userName = &u.Username
-	}
-
-	f, err := r.GetOrDownloadPackage(group, name, version, i.TargetDirectory, i.SourceURL, i.Authentication, i.Comment, nil, userName)
+	f, err := r.GetOrDownload(group, name, version, i.SourceURL, i.Authentication)
 	if err != nil {
 		return nil, 0, nil, err
 	}
