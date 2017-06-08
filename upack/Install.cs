@@ -54,16 +54,22 @@ namespace Inedo.ProGet.UPack
         public string Comment { get; set; }
 
         [DisplayName("userregistry")]
-        [Description("Cache the package in the user registry instead of the machine registry.")]
+        [Description("Register the package in the user registry instead of the machine registry.")]
         [ExtraArgument]
         [DefaultValue(false)]
         public bool UserRegistry { get; set; } = false;
 
         [DisplayName("unregistered")]
-        [Description("Do not cache the package in a local registry.")]
+        [Description("Do not register the package in a local registry.")]
         [ExtraArgument]
         [DefaultValue(false)]
         public bool Unregistered { get; set; } = false;
+
+        [DisplayName("cache")]
+        [Description("Cache the contents of the package in the local registry.")]
+        [ExtraArgument]
+        [DefaultValue(false)]
+        public bool CachePackages { get; set; } = false;
 
         public override async Task<int> RunAsync()
         {
@@ -80,7 +86,23 @@ namespace Inedo.ProGet.UPack
 
         private async Task<Stream> OpenPackageAsync()
         {
-            if (this.Unregistered)
+            var r = this.UserRegistry ? Registry.User : Registry.Machine;
+            string group = null, name = null, version = null;
+
+            if (!this.Unregistered)
+            {
+                var parts = this.PackageName.Split(new[] { ':' }, 2, StringSplitOptions.None);
+                group = parts.Length > 1 ? parts[0] : null;
+                name = parts[parts.Length - 1];
+
+                version = await GetVersionAsync(this.SourceUrl, group, name, this.Version, this.Authentication, this.Prerelease);
+
+                await r.RegisterPackageAsync(group, name, UniversalPackageVersion.Parse(version),
+                    this.TargetDirectory, this.SourceUrl, this.Authentication,
+                    this.Comment, null, Environment.UserName);
+            }
+
+            if (this.Unregistered || !this.CachePackages)
             {
                 var url = await FormatDownloadUrlAsync(this.SourceUrl, this.PackageName, this.Version, this.Authentication, this.Prerelease);
 
@@ -118,15 +140,7 @@ namespace Inedo.ProGet.UPack
                 }
             }
 
-            var parts = this.PackageName.Split(new[] { ':' }, 2, StringSplitOptions.None);
-            var group = parts.Length > 1 ? parts[0] : null;
-            var name = parts[parts.Length - 1];
-
-            var version = await GetVersionAsync(this.SourceUrl, group, name, this.Version, this.Authentication, this.Prerelease);
-
-            return await (this.UserRegistry ? Registry.User : Registry.Machine).GetOrDownloadPackageAsync(group, name, UniversalPackageVersion.Parse(version),
-                this.TargetDirectory, this.SourceUrl, this.Authentication,
-                this.Comment, null, Environment.UserName);
+            return await r.GetOrDownloadAsync(group, name, UniversalPackageVersion.Parse(version), this.SourceUrl, this.Authentication);
         }
     }
 }

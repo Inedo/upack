@@ -26,6 +26,33 @@ namespace Inedo.ProGet.UPack
             this.path = path;
         }
 
+        private async Task<T> RetryAsync<T>(Func<Task<T>> f)
+        {
+            RegistryLockedException lastEx = null;
+
+            for (int tries = 0; tries < 1000; tries++)
+            {
+                try
+                {
+                    return await f();
+                }
+                catch (RegistryLockedException ex)
+                {
+                    lastEx = ex;
+
+                    await Console.Error.WriteAsync(ex.Message);
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    await Console.Error.WriteAsync('.');
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    await Console.Error.WriteAsync('.');
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    await Console.Error.WriteLineAsync('.');
+                }
+            }
+
+            throw lastEx;
+        }
+
         private async Task<T> WithLockAsync<T>(Func<Task<T>> f, string description)
         {
             if (description != null && description.Contains("\n"))
@@ -111,7 +138,7 @@ namespace Inedo.ProGet.UPack
 
         public async Task<IList<InstalledPackage>> ListInstalledPackagesAsync()
         {
-            return await this.WithLockAsync(() =>
+            return await this.RetryAsync(() => this.WithLockAsync(() =>
             {
                 var serializer = new DataContractJsonSerializer(typeof(List<InstalledPackage>));
                 try
@@ -125,7 +152,7 @@ namespace Inedo.ProGet.UPack
                 {
                     return Task.FromResult(new List<InstalledPackage>());
                 }
-            }, "listing installed packages");
+            }, "listing installed packages"));
         }
 
         private string GetCachedPackagePath(string group, string name, UniversalPackageVersion version)
@@ -133,11 +160,11 @@ namespace Inedo.ProGet.UPack
             return Path.Combine(path, "packageCache", (group ?? string.Empty).Replace('/', '$') + "$" + name, name + "." + version.ToString() + ".upack");
         }
 
-        public async Task<Stream> GetOrDownloadPackageAsync(string group, string name, UniversalPackageVersion version,
+        public async Task RegisterPackageAsync(string group, string name, UniversalPackageVersion version,
             string intendedPath, string feedUrl, NetworkCredential feedAuthentication = null,
             string installationReason = null, string installedUsing = null, string installedBy = null)
         {
-            await this.WithLockAsync(() =>
+            await this.RetryAsync(() => this.WithLockAsync(() =>
             {
                 List<InstalledPackage> packages;
                 var serializer = new DataContractJsonSerializer(typeof(List<InstalledPackage>));
@@ -184,8 +211,11 @@ namespace Inedo.ProGet.UPack
                 }
 
                 return Task.FromResult((object)null);
-            }, $"checking installation status of {group}/{name} {version}");
+            }, $"checking installation status of {group}/{name} {version}"));
+        }
 
+        public async Task<Stream> GetOrDownloadAsync(string group, string name, UniversalPackageVersion version, string feedUrl, NetworkCredential feedAuthentication = null)
+        {
             var cachePath = this.GetCachedPackagePath(group, name, version);
 
             if (!File.Exists(cachePath))
@@ -207,7 +237,7 @@ namespace Inedo.ProGet.UPack
 
                     var url = $"{feedUrl.TrimEnd('/')}/download/{encodedName}/{Uri.EscapeDataString(version.ToString())}";
 
-                    using (var response = await client.GetAsync(url))
+                    using (var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                     {
                         response.EnsureSuccessStatusCode();
 
