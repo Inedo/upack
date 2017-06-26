@@ -275,7 +275,7 @@ namespace Inedo.ProGet.UPack
             }
 
             if (!hasContent)
-                zipFile.CreateEntry(entryRootPath + Path.GetFileName(sourceDirectory) + "/");
+                zipFile.CreateEntry(entryRootPath);
         }
 
         internal static async Task<string> FormatDownloadUrlAsync(string source, string packageName, string version, NetworkCredential credentials, bool prerelease)
