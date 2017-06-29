@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace Inedo.ProGet.UPack
 {
-	internal sealed class UniversalPackageVersion : IEquatable<UniversalPackageVersion>, IComparable<UniversalPackageVersion>, IComparable
+	public sealed class UniversalPackageVersion : IEquatable<UniversalPackageVersion>, IComparable<UniversalPackageVersion>, IComparable
 	{
 		private static readonly Regex SemanticVersionRegex = new Regex(
 			@"^(?<1>[0-9]+)\.(?<2>[0-9]+)\.(?<3>[0-9]+)(-(?<4>[0-9a-zA-Z\.-]+))?(\+(?<5>[0-9a-zA-Z\.-]+))?$",

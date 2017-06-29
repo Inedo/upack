@@ -316,6 +316,31 @@ namespace Inedo.ProGet.UPack
             }
         }
 
+        internal static async Task<string> GetVersionAsync(string source, string group, string name, string version, NetworkCredential credentials, bool prerelease)
+        {
+            if (!string.IsNullOrEmpty(version) && !string.Equals(version, "latest", StringComparison.OrdinalIgnoreCase) && !prerelease)
+            {
+                return version;
+            }
+
+            using (var client = CreateClient(credentials))
+            using (var response = await client.GetAsync($"{source.TrimEnd('/')}/packages?group={Uri.EscapeDataString(group)}&name={Uri.EscapeDataString(name)}"))
+            {
+                response.EnsureSuccessStatusCode();
+
+                var serializer = new DataContractJsonSerializer(typeof(RemotePackageMetadata));
+                var metadata = (RemotePackageMetadata)serializer.ReadObject(await response.Content.ReadAsStreamAsync());
+                var versions = metadata.Versions.Select(UniversalPackageVersion.Parse);
+
+                if (!prerelease)
+                {
+                    versions = versions.Where(v => string.IsNullOrEmpty(v.Prerelease));
+                }
+
+                return versions.Max().ToString();
+            }
+        }
+
         internal static HttpClient CreateClient(NetworkCredential credentials)
         {
             return new HttpClient(new HttpClientHandler

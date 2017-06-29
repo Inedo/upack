@@ -2,119 +2,129 @@ package main
 
 import (
 	"archive/zip"
-	"context"
-	"encoding/base64"
-	"flag"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
-
-	"github.com/google/subcommands"
 )
 
-type pushCommand struct {
-	user string
+type Push struct {
+	Package        string
+	Target         string
+	Authentication *[2]string
 }
 
-func (cmd *pushCommand) Name() string { return "push" }
-
-func (cmd *pushCommand) Synopsis() string {
+func (*Push) Name() string { return "push" }
+func (*Push) Description() string {
 	return "Pushes a ProGet universal package to the specified ProGet feed."
 }
 
-func (cmd *pushCommand) Usage() string {
-	return "upack push «package» «target» [--user=«authentication»]\n\n" +
-		"package: Path of a valid .upack file.\n" +
-		"target - URL of a upack API endpoint.\n"
-}
+func (p *Push) Help() string  { return defaultCommandHelp(p) }
+func (p *Push) Usage() string { return defaultCommandUsage(p) }
 
-func (cmd *pushCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&cmd.user, "user", "", "User name and password for servers that require authentication. Example: username:password")
-}
-
-func (cmd *pushCommand) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) (exit subcommands.ExitStatus) {
-	if f.NArg() != 2 {
-		f.Usage()
-		return subcommands.ExitUsageError
+func (*Push) PositionalArguments() []PositionalArgument {
+	return []PositionalArgument{
+		{
+			Name:        "package",
+			Description: "Path of a valid .upack file.",
+			Index:       0,
+			TrySetValue: trySetStringValue("package", func(cmd Command) *string {
+				return &cmd.(*Push).Package
+			}),
+		},
+		{
+			Name:        "target",
+			Description: "URL of a upack API endpoint.",
+			Index:       1,
+			TrySetValue: trySetStringValue("target", func(cmd Command) *string {
+				return &cmd.(*Push).Target
+			}),
+		},
 	}
+}
+func (*Push) ExtraArguments() []ExtraArgument {
+	return []ExtraArgument{
+		{
+			Name:        "user",
+			Description: "User name and password to use for servers that require authentication. Example: username:password",
+			TrySetValue: trySetBasicAuthValue("user", func(cmd Command) **[2]string {
+				return &cmd.(*Push).Authentication
+			}),
+		},
+	}
+}
 
-	zf, err := os.Open(f.Arg(0))
+func (p *Push) Run() int {
+	packageStream, err := os.Open(p.Package)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Opening upack file:", err)
-		return subcommands.ExitFailure
+		fmt.Fprintln(os.Stderr, err)
+		return 1
 	}
-	defer func() {
-		if err := zf.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, "Closing upack file:", err)
-			exit = subcommands.ExitFailure
+	defer packageStream.Close()
+
+	var info *PackageMetadata
+
+	fi, err := packageStream.Stat()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+
+	zipFile, err := zip.NewReader(packageStream, fi.Size())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+
+	for _, entry := range zipFile.File {
+		if entry.Name == "upack.json" {
+			r, err := entry.Open()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return 1
+			}
+
+			info, err = ReadManifest(r)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				return 1
+			}
+			break
 		}
-	}()
-
-	fi, err := zf.Stat()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Computing size of upack file:", err)
-		return subcommands.ExitFailure
 	}
 
-	zr, err := zip.NewReader(zf, fi.Size())
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Reading upack file:", err)
-		return subcommands.ExitFailure
+	if info == nil {
+		fmt.Fprintln(os.Stderr, "upack.json missing from upack file!")
+		return 1
 	}
 
-	info, err := readZipMetadata(zr)
+	PrintManifest(info)
+
+	req, err := http.NewRequest("PUT", p.Target, packageStream)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Reading package metadata:", err)
-		return subcommands.ExitFailure
+		fmt.Fprintln(os.Stderr, err)
+		return 1
 	}
 
-	_, err = zf.Seek(0, io.SeekStart)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Rewinding upack file:", err)
-		return subcommands.ExitFailure
-	}
-
-	info.print()
-
-	req, err := http.NewRequest("PUT", f.Arg(1), ioutil.NopCloser(zf))
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Preparing HTTP request:", err)
-		return subcommands.ExitFailure
-	}
-
-	setBasicAuth(req, cmd.user)
+	req.Header.Set("Content-Length", fmt.Sprintf("%d", fi.Size()))
 	req.Header.Set("Content-Type", "application/octet-stream")
+
+	if p.Authentication != nil {
+		req.SetBasicAuth(p.Authentication[0], p.Authentication[1])
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Sending HTTP request:", err)
-		return subcommands.ExitFailure
+		fmt.Fprintln(os.Stderr, err)
+		return 1
 	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			fmt.Fprintln(os.Stderr, "Closing HTTP response:", err)
-			exit = subcommands.ExitFailure
-		}
-	}()
+	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusCreated {
-		fmt.Printf("%s:%s %s published!\n", info.Group, info.Name, info.Version)
-		return subcommands.ExitSuccess
+	if resp.StatusCode != http.StatusCreated {
+		fmt.Fprintln(os.Stderr, resp.Status)
+		return 1
 	}
 
-	fmt.Fprintf(os.Stderr, "upack API returned %s\n", resp.Status)
-	_, err = io.Copy(os.Stderr, resp.Body)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Reading error data:", err)
-	}
-	return subcommands.ExitFailure
+	fmt.Println(info.Group+":"+info.Name, info.Version, "published!")
 
-}
-
-func setBasicAuth(req *http.Request, user string) {
-	if user != "" {
-		req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(user)))
-	}
+	return 0
 }
