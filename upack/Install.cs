@@ -12,7 +12,7 @@ namespace Inedo.ProGet.UPack
     public sealed class Install : Command
     {
         [DisplayName("package")]
-        [Description("Package name and group, such as group:name.")]
+        [Description("Package name and group, such as group/name.")]
         [PositionalArgument(0)]
         public string PackageName { get; set; }
 
@@ -91,8 +91,8 @@ namespace Inedo.ProGet.UPack
 
             if (!this.Unregistered)
             {
-                var parts = this.PackageName.Split(new[] { ':' }, 2, StringSplitOptions.None);
-                group = parts.Length > 1 ? parts[0] : null;
+                var parts = this.PackageName.Split(new[] { ':', '/' });
+                group = parts.Length > 1 ? string.Join("/", new ArraySegment<string>(parts, 0, parts.Length - 1)) : null;
                 name = parts[parts.Length - 1];
 
                 version = await GetVersionAsync(this.SourceUrl, group, name, this.Version, this.Authentication, this.Prerelease);

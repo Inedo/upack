@@ -124,7 +124,7 @@ func (p *Push) Run() int {
 		return 1
 	}
 
-	fmt.Println(info.Group+":"+info.Name, info.Version, "published!")
+	fmt.Println(info.groupAndName(), info.Version, "published!")
 
 	return 0
 }

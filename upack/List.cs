@@ -20,7 +20,7 @@ namespace Inedo.ProGet.UPack
 
             foreach (var pkg in packages)
             {
-                Console.WriteLine($"{pkg.Group}/{pkg.Name} {pkg.Version}");
+                Console.WriteLine($"{pkg.GroupAndName} {pkg.Version}");
                 if (!string.IsNullOrEmpty(pkg.FeedUrl))
                 {
                     Console.WriteLine($"From {pkg.FeedUrl}");

@@ -21,3 +21,10 @@ func (meta PackageMetadata) BareVersion() string {
 
 	return meta.Version
 }
+
+func (meta PackageMetadata) groupAndName() string {
+	if meta.Group != "" {
+		return meta.Group + "/" + meta.Name
+	}
+	return meta.Name
+}

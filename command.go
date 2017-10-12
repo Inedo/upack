@@ -173,7 +173,7 @@ func ReadManifest(r io.Reader) (*PackageMetadata, error) {
 }
 
 func PrintManifest(info *PackageMetadata) {
-	fmt.Println("Package:", info.Group+":"+info.Name)
+	fmt.Println("Package:", info.groupAndName())
 	fmt.Println("Version:", info.Version)
 }
 
@@ -296,11 +296,12 @@ func AddDirectory(zipFile *zip.Writer, sourceDirectory, entryRootPath string) (e
 }
 
 func FormatDownloadURL(source, packageName, version string, credentials *[2]string, prerelease bool) (string, error) {
-	parts := strings.Split(packageName, ":")
-	encodedName := url.PathEscape(parts[0])
-	if len(parts) > 1 {
-		encodedName += "/" + url.PathEscape(parts[1])
+	parts := strings.Split(strings.Replace(packageName, ":", "/", -1), "/")
+	escapedParts := make([]string, len(parts))
+	for i, p := range parts {
+		escapedParts[i] = url.PathEscape(p)
 	}
+	encodedName := strings.Join("/", escapedParts)
 
 	if version != "" || !prerelease {
 		if version == "" || strings.EqualFold(version, "latest") {
@@ -314,8 +315,8 @@ func FormatDownloadURL(source, packageName, version string, credentials *[2]stri
 	if len(parts) == 1 {
 		name = parts[0]
 	} else {
-		group = parts[0]
-		name = parts[1]
+		group = strings.Join("/", parts[:len(parts)-1])
+		name = parts[len(parts)-1]
 	}
 
 	latestVersion, err := GetVersion(source, group, name, version, credentials, prerelease)

@@ -209,7 +209,7 @@ namespace Inedo.ProGet.UPack
 
         internal static void PrintManifest(PackageMetadata info)
         {
-            Console.WriteLine($"Package: {info.Group}:{info.Name}");
+            Console.WriteLine($"Package: {info.GroupAndName}");
             Console.WriteLine($"Version: {info.Version}");
         }
 
@@ -280,10 +280,8 @@ namespace Inedo.ProGet.UPack
 
         internal static async Task<string> FormatDownloadUrlAsync(string source, string packageName, string version, NetworkCredential credentials, bool prerelease)
         {
-            var parts = packageName.Split(':');
-            string encodedName = Uri.EscapeUriString(parts[0]);
-            if (parts.Length > 1)
-                encodedName += '/' + Uri.EscapeUriString(parts[1]);
+            var parts = packageName.Split(new[] { ':', '/' });
+            string encodedName = string.Join("/", parts.Select(Uri.EscapeUriString));
 
             if (!string.IsNullOrEmpty(version) || !prerelease)
             {

@@ -44,7 +44,7 @@ func (l *List) Run() int {
 	}
 
 	for _, pkg := range packages {
-		fmt.Println(pkg.Group + "/" + pkg.Name + " " + pkg.Version.String())
+		fmt.Println(pkg.groupAndName() + " " + pkg.Version.String())
 		if pkg.FeedURL != nil && *pkg.FeedURL != "" {
 			fmt.Println("From", *pkg.FeedURL)
 		}

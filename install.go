@@ -37,7 +37,7 @@ func (*Install) PositionalArguments() []PositionalArgument {
 	return []PositionalArgument{
 		{
 			Name:        "package",
-			Description: "Package name and group, such as group:name.",
+			Description: "Package name and group, such as group/name.",
 			Index:       0,
 			TrySetValue: trySetStringValue("package", func(cmd Command) *string {
 				return &cmd.(*Install).PackageName
@@ -161,12 +161,12 @@ func (i *Install) OpenPackage() (io.ReaderAt, int64, func() error, error) {
 	var version *UniversalPackageVersion
 
 	if !i.Unregistered {
-		parts := strings.SplitN(i.PackageName, ":", 2)
+		parts := strings.Split(strings.Replace(i.PackageName, ":", "/", -1), "/")
 		if len(parts) == 1 {
 			name = parts[0]
 		} else {
-			group = parts[0]
-			name = parts[1]
+			group = strings.Join(parts[:len(parts)-1], "/")
+			name = parts[len(parts)-1]
 		}
 
 		versionString, err := GetVersion(i.SourceURL, group, name, i.Version, i.Authentication, i.Prerelease)
