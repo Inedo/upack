@@ -9,6 +9,7 @@ namespace Inedo.ProGet.UPack
         public string Group { get; set; }
         [DataMember(IsRequired = true, Name = "name")]
         public string Name { get; set; }
+        internal string GroupAndName => string.IsNullOrEmpty(this.Group) ? this.Name : this.Group + "/" + this.Name;
         [DataMember(IsRequired = true, Name = "version")]
         public string Version { get; set; }
         [DataMember(IsRequired = false, Name = "title")]

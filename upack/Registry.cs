@@ -262,6 +262,8 @@ namespace Inedo.ProGet.UPack
         [DataMember(IsRequired = true, Name = "name")]
         public string Name { get; set; }
 
+        internal string GroupAndName => string.IsNullOrEmpty(this.Group) ? this.Name : this.Group + "/" + this.Name;
+
         public UniversalPackageVersion Version { get; set; }
 
         [DataMember(IsRequired = true, Name = "version")]

@@ -339,6 +339,13 @@ type InstalledPackage struct {
 	InstalledBy *string `json:"installedBy,omitempty"`
 }
 
+func (i InstalledPackage) groupAndName() string {
+	if i.Group != "" {
+		return i.Group + "/" + i.Name
+	}
+	return i.Name
+}
+
 type InstalledPackageDate struct {
 	Date time.Time
 }

@@ -58,7 +58,7 @@ namespace Inedo.ProGet.UPack
                     }))
                     {
                         response.EnsureSuccessStatusCode();
-                        Console.WriteLine($"{info.Group}:{info.Name} {info.Version} published!");
+                        Console.WriteLine($"{info.GroupAndName} {info.Version} published!");
                     }
                 }
             }
