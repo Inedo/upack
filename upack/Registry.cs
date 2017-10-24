@@ -281,16 +281,38 @@ namespace Inedo.ProGet.UPack
         [DataMember(IsRequired = false, Name = "feed")]
         public string FeedUrl { get; set; }
 
+        private DateTime? installationDate;
+        private string installationDateString;
+
         // The UTC date when the package was installed.
-        public DateTime? InstallationDate { get; set; }
+        public DateTime? InstallationDate
+        {
+            get => this.installationDate;
+            set
+            {
+                if (value.HasValue)
+                {
+                    this.installationDate = value;
+                    this.installationDateString = value?.ToString("o");
+                }
+                else
+                {
+                    this.installationDate = null;
+                    this.installationDateString = null;
+                }
+            }
+        }
 
         [DataMember(IsRequired = false, Name = "installationDate")]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public string InstallationDateString
         {
-            get => this.InstallationDate?.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss");
-
-            set => this.InstallationDate = string.IsNullOrEmpty(value) ? null : (DateTime?)DateTime.ParseExact(value, "yyyy'-'MM'-'dd'T'HH':'mm':'ss", CultureInfo.InvariantCulture);
+            get => this.installationDateString;
+            set
+            {
+                this.installationDate = string.IsNullOrEmpty(value) ? null : (DateTime?)DateTime.Parse(value);
+                this.installationDateString = value;
+            }
         }
 
         // The reason or purpose of the installation.

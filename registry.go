@@ -348,16 +348,25 @@ func (i InstalledPackage) groupAndName() string {
 
 type InstalledPackageDate struct {
 	Date time.Time
+
+	originalText string
 }
 
-const installedPackageDateFormat = "2006-01-02T15:04:05"
+const installedPackageDateLegacyFormat = "2006-01-02T15:04:05"
 
 func (i InstalledPackageDate) MarshalText() ([]byte, error) {
-	return []byte(i.Date.Format(installedPackageDateFormat)), nil
+	if i.originalText != "" {
+		return []byte(i.originalText), nil
+	}
+	return []byte(i.Date.Format(time.RFC3339Nano)), nil
 }
 
 func (i *InstalledPackageDate) UnmarshalText(b []byte) error {
-	t, err := time.ParseInLocation(installedPackageDateFormat, string(b), time.UTC)
+	i.originalText = string(b)
+	t, err := time.ParseInLocation(installedPackageDateLegacyFormat, i.originalText, time.UTC)
+	if err != nil {
+		t, err = time.Parse(time.RFC3339Nano, i.originalText)
+	}
 	if err != nil {
 		return err
 	}
