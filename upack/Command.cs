@@ -258,6 +258,17 @@ namespace Inedo.ProGet.UPack
             }
         }
 
+        internal static async Task CreateEntryFromStreamAsync(ZipArchive zipFile, Stream file, string entryPath)
+        {
+            var entry = zipFile.CreateEntry(entryPath);
+            
+            using (var output = entry.Open())
+            {
+                file.Position = 0;
+                await file.CopyToAsync(output);
+            }
+        }
+
         internal static async Task AddDirectoryAsync(ZipArchive zipFile, string sourceDirectory, string entryRootPath)
         {
             bool hasContent = false;
