@@ -22,7 +22,7 @@ namespace Inedo.ProGet.UPack
         public string[] Dependencies { get; set; }
 
         public string BareVersion
-		{
+        {
             get
             {
                 var packageVersion = UniversalPackageVersion.TryParse(Version);

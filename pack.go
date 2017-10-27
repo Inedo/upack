@@ -2,6 +2,8 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +11,7 @@ import (
 
 type Pack struct {
 	Manifest        string
+	Metadata        PackageMetadata
 	SourceDirectory string
 	TargetDirectory string
 }
@@ -24,17 +27,9 @@ func (p *Pack) Usage() string { return defaultCommandUsage(p) }
 func (*Pack) PositionalArguments() []PositionalArgument {
 	return []PositionalArgument{
 		{
-			Name:        "metadata",
-			Description: "Path of a valid upack.json metadata file.",
-			Index:       0,
-			TrySetValue: trySetStringValue("manifest", func(cmd Command) *string {
-				return &cmd.(*Pack).Manifest
-			}),
-		},
-		{
 			Name:        "source",
 			Description: "Directory containing files to add to the package.",
-			Index:       1,
+			Index:       0,
 			TrySetValue: trySetStringValue("source", func(cmd Command) *string {
 				return &cmd.(*Pack).SourceDirectory
 			}),
@@ -44,10 +39,59 @@ func (*Pack) PositionalArguments() []PositionalArgument {
 func (*Pack) ExtraArguments() []ExtraArgument {
 	return []ExtraArgument{
 		{
+			Name:        "metadata",
+			Description: "Path of a valid upack.json metadata file.",
+			TrySetValue: trySetStringValue("manifest", func(cmd Command) *string {
+				return &cmd.(*Pack).Manifest
+			}),
+		},
+		{
 			Name:        "targetDirectory",
 			Description: "Directory where the .upack file will be created. If not specified, the current working directory is used.",
 			TrySetValue: trySetStringValue("targetDirectory", func(cmd Command) *string {
 				return &cmd.(*Pack).TargetDirectory
+			}),
+		},
+		{
+			Name:        "group",
+			Description: "Package group. If metadata file is provided, value will be ignored.",
+			TrySetValue: trySetStringValue("group", func(cmd Command) *string {
+				return &cmd.(*Pack).Metadata.Group
+			}),
+		},
+		{
+			Name:        "name",
+			Description: "Package name. If metadata file is provided, value will be ignored.",
+			TrySetValue: trySetStringValue("name", func(cmd Command) *string {
+				return &cmd.(*Pack).Metadata.Name
+			}),
+		},
+		{
+			Name:        "version",
+			Description: "Package version. If metadata file is provided, value will be ignored.",
+			TrySetValue: trySetStringValue("version", func(cmd Command) *string {
+				return &cmd.(*Pack).Metadata.Version
+			}),
+		},
+		{
+			Name:        "title",
+			Description: "Package title. If metadata file is provided, value will be ignored.",
+			TrySetValue: trySetStringValue("title", func(cmd Command) *string {
+				return &cmd.(*Pack).Metadata.Title
+			}),
+		},
+		{
+			Name:        "description",
+			Description: "Package description. If metadata file is provided, value will be ignored.",
+			TrySetValue: trySetStringValue("description", func(cmd Command) *string {
+				return &cmd.(*Pack).Metadata.Description
+			}),
+		},
+		{
+			Name:        "icon",
+			Description: "Icon absolute URL. If metadata file is provided, value will be ignored.",
+			TrySetValue: trySetStringValue("icon", func(cmd Command) *string {
+				return &cmd.(*Pack).Metadata.IconURL
 			}),
 		},
 	}
@@ -58,10 +102,22 @@ func (p *Pack) Run() int {
 		p.TargetDirectory = "."
 	}
 
-	info, err := p.ReadManifest()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
+	info := &p.Metadata
+	if p.Manifest != "" {
+		var err error
+		info, err = p.ReadManifest()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+	}
+	if info.Name == "" {
+		fmt.Fprintln(os.Stderr, "Missing package name.")
+		return 2
+	}
+	if info.Version == "" {
+		fmt.Fprintln(os.Stderr, "Missing package version.")
+		return 2
 	}
 
 	PrintManifest(info)
@@ -76,10 +132,25 @@ func (p *Pack) Run() int {
 
 	zipFile := zip.NewWriter(zipStream)
 
-	err = CreateEntryFromFile(zipFile, p.Manifest, "upack.json")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return 1
+	if p.Manifest != nil {
+		err = CreateEntryFromFile(zipFile, p.Manifest, "upack.json")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+	} else {
+		var buf bytes.Buffer
+		err = json.NewEncoder(&buf).Encode(&p.Metadata)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+
+		err = CreateEntryFromStream(zipFile, &buf, "upack.json")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
 	}
 
 	err = AddDirectory(zipFile, p.SourceDirectory, "package/")

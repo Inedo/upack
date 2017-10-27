@@ -86,6 +86,17 @@ namespace Inedo.ProGet.UPack
                 }
             }
 
+            if (string.IsNullOrEmpty(info.Name))
+            {
+                Console.Error.WriteLine("Missing package name.");
+                return 2;
+            }
+            if (string.IsNullOrEmpty(info.Version))
+            {
+                Console.Error.WriteLine("Missing package version.");
+                return 2;
+            }
+
             PrintManifest(info);
 
             var serializer = new DataContractJsonSerializer(typeof(PackageMetadata));

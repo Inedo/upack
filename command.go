@@ -267,6 +267,16 @@ func CreateEntryFromFile(zipFile *zip.Writer, fileName, entryPath string) (err e
 	return
 }
 
+func CreateEntryFromStream(zipFile *zip.Writer, file io.Reader, entryPath string) (err error) {
+	w, err := zipFile.Create(entryPath)
+	if err != nil {
+		return
+	}
+
+	_, err = io.Copy(w, file)
+	return
+}
+
 func AddDirectory(zipFile *zip.Writer, sourceDirectory, entryRootPath string) (err error) {
 	var hasContent bool
 
