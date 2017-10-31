@@ -311,7 +311,7 @@ func FormatDownloadURL(source, packageName, version string, credentials *[2]stri
 	for i, p := range parts {
 		escapedParts[i] = url.PathEscape(p)
 	}
-	encodedName := strings.Join("/", escapedParts)
+	encodedName := strings.Join(escapedParts, "/")
 
 	if version != "" || !prerelease {
 		if version == "" || strings.EqualFold(version, "latest") {
@@ -325,7 +325,7 @@ func FormatDownloadURL(source, packageName, version string, credentials *[2]stri
 	if len(parts) == 1 {
 		name = parts[0]
 	} else {
-		group = strings.Join("/", parts[:len(parts)-1])
+		group = strings.Join(parts[:len(parts)-1], "/")
 		name = parts[len(parts)-1]
 	}
 

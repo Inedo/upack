@@ -132,7 +132,7 @@ func (p *Pack) Run() int {
 
 	zipFile := zip.NewWriter(zipStream)
 
-	if p.Manifest != nil {
+	if p.Manifest != "" {
 		err = CreateEntryFromFile(zipFile, p.Manifest, "upack.json")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)

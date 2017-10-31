@@ -236,7 +236,7 @@ func (r Registry) RegisterPackage(group, name string, version *UniversalPackageV
 				Version:            version,
 				Path:               &intendedPath,
 				FeedURL:            &feedURL,
-				InstallationDate:   &InstalledPackageDate{time.Now().UTC()},
+				InstallationDate:   &InstalledPackageDate{time.Now().UTC(), ""},
 				InstallationReason: installationReason,
 				InstalledUsing:     installedUsing,
 				InstalledBy:        installedBy,
