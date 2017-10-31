@@ -86,61 +86,20 @@ namespace Inedo.ProGet.UPack
 
         private async Task<Stream> OpenPackageAsync()
         {
-            var r = this.UserRegistry ? Registry.User : Registry.Machine;
+            var r = this.Unregistered ? Registry.Unregistered : this.UserRegistry ? Registry.User : Registry.Machine;
             string group = null, name = null, version = null;
 
-            if (!this.Unregistered)
-            {
-                var parts = this.PackageName.Split(new[] { ':', '/' });
-                group = parts.Length > 1 ? string.Join("/", new ArraySegment<string>(parts, 0, parts.Length - 1)) : null;
-                name = parts[parts.Length - 1];
+            var parts = this.PackageName.Split(new[] { ':', '/' });
+            group = parts.Length > 1 ? string.Join("/", new ArraySegment<string>(parts, 0, parts.Length - 1)) : null;
+            name = parts[parts.Length - 1];
 
-                version = await GetVersionAsync(this.SourceUrl, group, name, this.Version, this.Authentication, this.Prerelease);
+            version = await GetVersionAsync(this.SourceUrl, group, name, this.Version, this.Authentication, this.Prerelease);
 
-                await r.RegisterPackageAsync(group, name, UniversalPackageVersion.Parse(version),
-                    this.TargetDirectory, this.SourceUrl, this.Authentication,
-                    this.Comment, null, Environment.UserName);
-            }
+            await r.RegisterPackageAsync(group, name, UniversalPackageVersion.Parse(version),
+                this.TargetDirectory, this.SourceUrl, this.Authentication,
+                this.Comment, null, Environment.UserName);
 
-            if (this.Unregistered || !this.CachePackages)
-            {
-                var url = await FormatDownloadUrlAsync(this.SourceUrl, this.PackageName, this.Version, this.Authentication, this.Prerelease);
-
-                using (var client = CreateClient(this.Authentication))
-                {
-                    using (var response = await client.GetAsync(url))
-                    {
-                        response.EnsureSuccessStatusCode();
-
-                        var tempFileName = Path.GetTempFileName();
-
-                        var tempStream = new FileStream(tempFileName, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
-
-                        try
-                        {
-                            await response.Content.CopyToAsync(tempStream);
-
-                            tempStream.Position = 0;
-
-                            return tempStream;
-                        }
-                        catch
-                        {
-                            try
-                            {
-                                tempStream.Dispose();
-                            }
-                            catch
-                            {
-                            }
-
-                            throw;
-                        }
-                    }
-                }
-            }
-
-            return await r.GetOrDownloadAsync(group, name, UniversalPackageVersion.Parse(version), this.SourceUrl, this.Authentication);
+            return await r.GetOrDownloadAsync(group, name, UniversalPackageVersion.Parse(version), this.SourceUrl, this.Authentication, this.CachePackages);
         }
     }
 }

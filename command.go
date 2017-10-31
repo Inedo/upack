@@ -305,38 +305,6 @@ func AddDirectory(zipFile *zip.Writer, sourceDirectory, entryRootPath string) (e
 	return
 }
 
-func FormatDownloadURL(source, packageName, version string, credentials *[2]string, prerelease bool) (string, error) {
-	parts := strings.Split(strings.Replace(packageName, ":", "/", -1), "/")
-	escapedParts := make([]string, len(parts))
-	for i, p := range parts {
-		escapedParts[i] = url.PathEscape(p)
-	}
-	encodedName := strings.Join(escapedParts, "/")
-
-	if version != "" || !prerelease {
-		if version == "" || strings.EqualFold(version, "latest") {
-			return strings.TrimRight(source, "/") + "/download/" + encodedName + "?latest", nil
-		} else {
-			return strings.TrimRight(source, "/") + "/download/" + encodedName + "/" + url.QueryEscape(version), nil
-		}
-	}
-
-	var group, name string
-	if len(parts) == 1 {
-		name = parts[0]
-	} else {
-		group = strings.Join(parts[:len(parts)-1], "/")
-		name = parts[len(parts)-1]
-	}
-
-	latestVersion, err := GetVersion(source, group, name, version, credentials, prerelease)
-	if err != nil {
-		return "", err
-	}
-
-	return FormatDownloadURL(source, packageName, latestVersion, credentials, false)
-}
-
 func GetVersion(source, group, name, version string, credentials *[2]string, prerelease bool) (string, error) {
 	if version != "" && !strings.EqualFold(version, "latest") && !prerelease {
 		return version, nil

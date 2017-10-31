@@ -289,42 +289,6 @@ namespace Inedo.ProGet.UPack
                 zipFile.CreateEntry(entryRootPath);
         }
 
-        internal static async Task<string> FormatDownloadUrlAsync(string source, string packageName, string version, NetworkCredential credentials, bool prerelease)
-        {
-            var parts = packageName.Split(new[] { ':', '/' });
-            string encodedName = string.Join("/", parts.Select(Uri.EscapeUriString));
-
-            if (!string.IsNullOrEmpty(version) || !prerelease)
-            {
-                if (string.IsNullOrEmpty(version) || string.Equals(version, "latest", StringComparison.OrdinalIgnoreCase))
-                    return $"{source.TrimEnd('/')}/download/{encodedName}?latest";
-                else
-                    return $"{source.TrimEnd('/')}/download/{encodedName}/{Uri.EscapeDataString(version)}";
-            }
-            else
-            {
-                var legacyGroupParts = encodedName.Split('/');
-                var group = string.Empty;
-                if (legacyGroupParts.Length > 1)
-                {
-                    group = string.Join("%2f", legacyGroupParts.Take(legacyGroupParts.Length - 1));
-                    encodedName = legacyGroupParts.Last();
-                }
-
-                using (var client = CreateClient(credentials))
-                {
-                    using (var response = await client.GetAsync($"{source.TrimEnd('/')}/packages?group={group}&name={encodedName}"))
-                    {
-                        response.EnsureSuccessStatusCode();
-                        var serializer = new DataContractJsonSerializer(typeof(RemotePackageMetadata));
-                        var metadata = (RemotePackageMetadata)serializer.ReadObject(await response.Content.ReadAsStreamAsync());
-                        var latestVersion = metadata.Versions.Select(UniversalPackageVersion.Parse).Max();
-                        return await FormatDownloadUrlAsync(source, packageName, latestVersion.ToString(), credentials, false);
-                    }
-                }
-            }
-        }
-
         internal static async Task<string> GetVersionAsync(string source, string group, string name, string version, NetworkCredential credentials, bool prerelease)
         {
             if (!string.IsNullOrEmpty(version) && !string.Equals(version, "latest", StringComparison.OrdinalIgnoreCase) && !prerelease)

@@ -35,6 +35,7 @@ var (
 		}
 		return Registry(filepath.Join(u.HomeDir, ".upack"))
 	}()
+	Unregistered = Registry("")
 )
 
 func (r Registry) retry(task func() error) error {
@@ -176,6 +177,10 @@ func registryLocked(lockPath string) error {
 }
 
 func (r Registry) ListInstalledPackages() ([]*InstalledPackage, error) {
+	if r == "" {
+		return nil, nil
+	}
+
 	var installedPackages []*InstalledPackage
 	err := r.retry(func() error {
 		return r.withLock(func() error {
@@ -201,6 +206,10 @@ func (r Registry) getCachedPackagePath(group, name string, version *UniversalPac
 }
 
 func (r Registry) RegisterPackage(group, name string, version *UniversalPackageVersion, intendedPath, feedURL string, feedAuthentication *[2]string, installationReason, installedUsing, installedBy *string) error {
+	if r == "" {
+		return nil
+	}
+
 	return r.retry(func() error {
 		return r.withLock(func() error {
 			var packages []*InstalledPackage
@@ -254,23 +263,7 @@ func (r Registry) RegisterPackage(group, name string, version *UniversalPackageV
 	})
 }
 
-func (r Registry) GetOrDownload(group, name string, version *UniversalPackageVersion, feedURL string, feedAuthentication *[2]string) (*os.File, error) {
-	cachePath := r.getCachedPackagePath(group, name, version)
-
-	f, err := os.Open(cachePath)
-	if err == nil {
-		return f, nil
-	}
-
-	if !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	err = os.MkdirAll(filepath.Dir(cachePath), 0755)
-	if err != nil {
-		return nil, err
-	}
-
+func (r Registry) cachePackageToDisk(w io.Writer, group, name string, version *UniversalPackageVersion, feedURL string, feedAuthentication *[2]string) error {
 	encodedName := url.PathEscape(name)
 	if group != "" {
 		encodedName = url.PathEscape(group) + "/" + encodedName
@@ -278,7 +271,7 @@ func (r Registry) GetOrDownload(group, name string, version *UniversalPackageVer
 
 	req, err := http.NewRequest("GET", strings.TrimRight(feedURL, "/")+"/download/"+encodedName+"/"+url.QueryEscape(version.String()), nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if feedAuthentication != nil {
@@ -287,32 +280,81 @@ func (r Registry) GetOrDownload(group, name string, version *UniversalPackageVer
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("downloading package: %s", resp.Status)
+		return fmt.Errorf("downloading package: %s", resp.Status)
+	}
+
+	_, err = io.Copy(w, resp.Body)
+	return err
+}
+
+func (r Registry) GetOrDownload(group, name string, version *UniversalPackageVersion, feedURL string, feedAuthentication *[2]string, cache bool) (*os.File, func() error, error) {
+	if r == "" || !cache {
+		f, err := ioutil.TempFile("", "upack")
+		if err != nil {
+			return nil, nil, err
+		}
+		name := f.Name()
+
+		err = r.cachePackageToDisk(f, group, name, version, feedURL, feedAuthentication)
+		if err == nil {
+			_, err = f.Seek(0, io.SeekStart)
+		}
+		if err != nil {
+			_ = f.Close()
+			_ = os.Remove(name)
+			return nil, nil, err
+		}
+
+		return f, func() error {
+			err := f.Close()
+			if e := os.Remove(name); err == nil {
+				err = e
+			}
+			return err
+		}, nil
+	}
+
+	cachePath := r.getCachedPackagePath(group, name, version)
+
+	f, err := os.Open(cachePath)
+	if err == nil {
+		return f, f.Close, nil
+	}
+
+	if !os.IsNotExist(err) {
+		return nil, nil, err
+	}
+
+	err = os.MkdirAll(filepath.Dir(cachePath), 0755)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	f, err = os.OpenFile(cachePath, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0644)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	_, err = io.Copy(f, resp.Body)
+	err = r.cachePackageToDisk(f, group, name, version, feedURL, feedAuthentication)
 	if err != nil {
 		_ = f.Close()
-		return nil, err
+		_ = os.Remove(cachePath)
+		return nil, nil, err
 	}
 
 	_, err = f.Seek(0, io.SeekStart)
 	if err != nil {
 		_ = f.Close()
-		return nil, err
+		_ = os.Remove(cachePath)
+		return nil, nil, err
 	}
 
-	return f, nil
+	return f, f.Close, nil
 }
 
 type InstalledPackage struct {

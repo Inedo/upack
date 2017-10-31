@@ -4,8 +4,6 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"os/user"
 	"strings"
@@ -160,99 +158,52 @@ func (i *Install) OpenPackage() (io.ReaderAt, int64, func() error, error) {
 	var group, name string
 	var version *UniversalPackageVersion
 
-	if !i.Unregistered {
-		parts := strings.Split(strings.Replace(i.PackageName, ":", "/", -1), "/")
-		if len(parts) == 1 {
-			name = parts[0]
-		} else {
-			group = strings.Join(parts[:len(parts)-1], "/")
-			name = parts[len(parts)-1]
-		}
-
-		versionString, err := GetVersion(i.SourceURL, group, name, i.Version, i.Authentication, i.Prerelease)
-		if err != nil {
-			return nil, 0, nil, err
-		}
-		version, err = ParseUniversalPackageVersion(versionString)
-		if err != nil {
-			return nil, 0, nil, err
-		}
-
-		var userName *string
-		u, err := user.Current()
-		if err == nil {
-			userName = &u.Username
-		}
-
-		if i.UserRegistry {
-			r = User
-		} else {
-			r = Machine
-		}
-
-		err = r.RegisterPackage(group, name, version, i.TargetDirectory, i.SourceURL, i.Authentication, i.Comment, nil, userName)
-		if err != nil {
-			return nil, 0, nil, err
-		}
+	parts := strings.Split(strings.Replace(i.PackageName, ":", "/", -1), "/")
+	if len(parts) == 1 {
+		name = parts[0]
+	} else {
+		group = strings.Join(parts[:len(parts)-1], "/")
+		name = parts[len(parts)-1]
 	}
 
-	if i.Unregistered || !i.CachePackages {
-		url, err := FormatDownloadURL(i.SourceURL, i.PackageName, i.Version, i.Authentication, i.Prerelease)
-		if err != nil {
-			return nil, 0, nil, err
-		}
-
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			return nil, 0, nil, err
-		}
-
-		if i.Authentication != nil {
-			req.SetBasicAuth(i.Authentication[0], i.Authentication[1])
-		}
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return nil, 0, nil, err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode >= 400 {
-			return nil, 0, nil, fmt.Errorf("GET %q returned %s", url, resp.Status)
-		}
-
-		f, err := ioutil.TempFile("", "upack")
-		if err != nil {
-			return nil, 0, nil, err
-		}
-		fName := f.Name()
-
-		n, err := io.Copy(f, resp.Body)
-		if err != nil {
-			_ = f.Close()
-			_ = os.Remove(fName)
-			return nil, 0, nil, err
-		}
-
-		return f, n, func() error {
-			err := f.Close()
-			if e := os.Remove(fName); err == nil {
-				err = e
-			}
-			return err
-		}, nil
+	versionString, err := GetVersion(i.SourceURL, group, name, i.Version, i.Authentication, i.Prerelease)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	version, err = ParseUniversalPackageVersion(versionString)
+	if err != nil {
+		return nil, 0, nil, err
 	}
 
-	f, err := r.GetOrDownload(group, name, version, i.SourceURL, i.Authentication)
+	var userName *string
+	u, err := user.Current()
+	if err == nil {
+		userName = &u.Username
+	}
+
+	if i.Unregistered {
+		r = Unregistered
+	} else if i.UserRegistry {
+		r = User
+	} else {
+		r = Machine
+	}
+
+	err = r.RegisterPackage(group, name, version, i.TargetDirectory, i.SourceURL, i.Authentication, i.Comment, nil, userName)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	f, done, err := r.GetOrDownload(group, name, version, i.SourceURL, i.Authentication, i.CachePackages)
 	if err != nil {
 		return nil, 0, nil, err
 	}
 
 	fi, err := f.Stat()
 	if err != nil {
-		_ = f.Close()
+		_ = done()
 		return nil, 0, nil, err
 	}
 
-	return f, fi.Size(), f.Close, nil
+	return f, fi.Size(), done, nil
 }

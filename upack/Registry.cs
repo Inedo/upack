@@ -18,6 +18,7 @@ namespace Inedo.ProGet.UPack
     {
         public static Registry Machine => new Registry(Environment.OSVersion.Platform == PlatformID.Unix ? "/var/lib/upack" : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "upack"));
         public static Registry User => new Registry(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".upack"));
+        public static Registry Unregistered => new Registry(null);
 
         private readonly string path;
 
@@ -138,6 +139,11 @@ namespace Inedo.ProGet.UPack
 
         public async Task<IList<InstalledPackage>> ListInstalledPackagesAsync()
         {
+            if (this.path == null)
+            {
+                return new InstalledPackage[0];
+            }
+
             return await this.RetryAsync(() => this.WithLockAsync(() =>
             {
                 var serializer = new DataContractJsonSerializer(typeof(List<InstalledPackage>));
@@ -164,6 +170,11 @@ namespace Inedo.ProGet.UPack
             string intendedPath, string feedUrl, NetworkCredential feedAuthentication = null,
             string installationReason = null, string installedUsing = null, string installedBy = null)
         {
+            if (this.path == null)
+            {
+                return;
+            }
+
             await this.RetryAsync(() => this.WithLockAsync(() =>
             {
                 List<InstalledPackage> packages;
@@ -214,42 +225,84 @@ namespace Inedo.ProGet.UPack
             }, $"checking installation status of {group}/{name} {version}"));
         }
 
-        public async Task<Stream> GetOrDownloadAsync(string group, string name, UniversalPackageVersion version, string feedUrl, NetworkCredential feedAuthentication = null)
+        private async Task CachePackageToDisk(Stream stream, string group, string name, UniversalPackageVersion version, string feedUrl, NetworkCredential feedAuthentication = null)
         {
+            using (var client = new HttpClient(new HttpClientHandler
+            {
+                UseDefaultCredentials = feedAuthentication == null,
+                Credentials = feedAuthentication,
+                PreAuthenticate = true
+            }))
+            {
+                string encodedName = Uri.EscapeUriString(name);
+                if (!string.IsNullOrEmpty(group))
+                {
+                    encodedName = Uri.EscapeUriString(group) + '/' + encodedName;
+                }
+
+                var url = $"{feedUrl.TrimEnd('/')}/download/{encodedName}/{Uri.EscapeDataString(version.ToString())}";
+
+                using (var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                {
+                    response.EnsureSuccessStatusCode();
+
+                    await response.Content.CopyToAsync(stream);
+                }
+            }
+        }
+
+        public async Task<Stream> GetOrDownloadAsync(string group, string name, UniversalPackageVersion version, string feedUrl, NetworkCredential feedAuthentication = null, bool cache = true)
+        {
+            if (this.path == null || !cache)
+            {
+                var tempFile = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 0, FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+                try
+                {
+                    await this.CachePackageToDisk(tempFile, group, name, version, feedUrl, feedAuthentication);
+                    tempFile.Position = 0;
+                }
+                catch
+                {
+                    try
+                    {
+                        tempFile.Dispose();
+                    }
+                    catch
+                    {
+                    }
+                    throw;
+                }
+                return tempFile;
+            }
+
             var cachePath = this.GetCachedPackagePath(group, name, version);
 
             if (!File.Exists(cachePath))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(cachePath));
 
-                using (var client = new HttpClient(new HttpClientHandler
+                var stream = new FileStream(cachePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous);
+                try
                 {
-                    UseDefaultCredentials = feedAuthentication == null,
-                    Credentials = feedAuthentication,
-                    PreAuthenticate = true
-                }))
+                    using (stream)
+                    {
+                        await this.CachePackageToDisk(stream, group, name, version, feedUrl, feedAuthentication);
+                    }
+                }
+                catch
                 {
-                    string encodedName = Uri.EscapeUriString(name);
-                    if (!string.IsNullOrEmpty(group))
+                    try
                     {
-                        encodedName = Uri.EscapeUriString(group) + '/' + encodedName;
+                        File.Delete(cachePath);
                     }
-
-                    var url = $"{feedUrl.TrimEnd('/')}/download/{encodedName}/{Uri.EscapeDataString(version.ToString())}";
-
-                    using (var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                    catch
                     {
-                        response.EnsureSuccessStatusCode();
-
-                        using (var stream = new FileStream(cachePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                        {
-                            await response.Content.CopyToAsync(stream);
-                        }
                     }
+                    throw;
                 }
             }
 
-            return new FileStream(cachePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return new FileStream(cachePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
         }
     }
 
