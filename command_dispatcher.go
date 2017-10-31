@@ -43,9 +43,13 @@ func (cd CommandDispatcher) Main(args []string) {
 		}
 	}
 
+	if len(positional) > 0 && strings.EqualFold("help", positional[0]) {
+		hadError = true
+		positional = positional[1:]
+	}
+
 	var cmd Command
 	if len(positional) == 0 {
-
 		hadError = true
 	} else {
 		for _, command := range cd {

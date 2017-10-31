@@ -48,6 +48,12 @@ namespace Inedo.ProGet.UPack
                 }
             }
 
+            if (positional.Count > 0 && string.Equals("help", positional[0], StringComparison.OrdinalIgnoreCase))
+            {
+                hadError = true;
+                positional.RemoveAt(0);
+            }
+
             Command cmd = null;
             if (positional.Count == 0)
             {
