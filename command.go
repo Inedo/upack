@@ -178,7 +178,7 @@ func PrintManifest(info *PackageMetadata) {
 }
 
 func UnpackZip(targetDirectory string, overwrite bool, zipFile *zip.Reader) error {
-	err := os.MkdirAll(targetDirectory, 0755)
+	err := os.MkdirAll(targetDirectory, 0777)
 	if err != nil {
 		return err
 	}
@@ -194,13 +194,13 @@ func UnpackZip(targetDirectory string, overwrite bool, zipFile *zip.Reader) erro
 		targetPath := filepath.Join(targetDirectory, entry.Name[len("package/"):])
 
 		if entry.Mode().IsDir() {
-			err = os.MkdirAll(targetPath, 0755)
+			err = os.MkdirAll(targetPath, entry.Mode())
 			if err != nil {
 				return err
 			}
 			directories++
 		} else {
-			err = os.MkdirAll(filepath.Dir(targetPath), 0755)
+			err = os.MkdirAll(filepath.Dir(targetPath), entry.Mode())
 			if err != nil {
 				return err
 			}
@@ -248,11 +248,6 @@ func saveEntryToFile(entry *zip.File, targetPath string, overwrite bool) (err er
 }
 
 func CreateEntryFromFile(zipFile *zip.Writer, fileName, entryPath string) (err error) {
-	w, err := zipFile.Create(entryPath)
-	if err != nil {
-		return
-	}
-
 	f, err := os.Open(fileName)
 	if err != nil {
 		return
@@ -262,6 +257,24 @@ func CreateEntryFromFile(zipFile *zip.Writer, fileName, entryPath string) (err e
 			err = e
 		}
 	}()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return
+	}
+
+	h, err := zip.FileInfoHeader(fi)
+	if err != nil {
+		return
+	}
+
+	h.Name = entryPath
+	h.Method = zip.Deflate
+
+	w, err := zipFile.CreateHeader(h)
+	if err != nil {
+		return
+	}
 
 	_, err = io.Copy(w, f)
 	return
@@ -278,14 +291,28 @@ func CreateEntryFromStream(zipFile *zip.Writer, file io.Reader, entryPath string
 }
 
 func AddDirectory(zipFile *zip.Writer, sourceDirectory, entryRootPath string) (err error) {
-	var hasContent bool
+	fi, err := os.Stat(sourceDirectory)
+	if err != nil {
+		return
+	}
+
+	h, err := zip.FileInfoHeader(fi)
+	if err != nil {
+		return
+	}
+
+	h.Name = entryRootPath
+
+	_, err = zipFile.CreateHeader(h)
+	if err != nil {
+		return
+	}
 
 	infos, err := ioutil.ReadDir(sourceDirectory)
 	if err != nil {
 		return
 	}
 	for _, fi := range infos {
-		hasContent = true
 		if fi.IsDir() {
 			err = AddDirectory(zipFile, filepath.Join(sourceDirectory, fi.Name()), entryRootPath+fi.Name()+"/")
 		} else {
@@ -297,11 +324,6 @@ func AddDirectory(zipFile *zip.Writer, sourceDirectory, entryRootPath string) (e
 		}
 	}
 
-	if !hasContent {
-		_, err = zipFile.CreateHeader(&zip.FileHeader{
-			Name: entryRootPath + "/",
-		})
-	}
 	return
 }
 

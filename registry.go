@@ -68,13 +68,13 @@ func (r Registry) withLock(task func() error, description string) (err error) {
 		return errors.New("description must not contain line breaks")
 	}
 
-	err = os.MkdirAll(string(r), 0755)
+	err = os.MkdirAll(string(r), 0777)
 	if err != nil {
 		return err
 	}
 
 	lockPath := filepath.Join(string(r), ".lock")
-	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
 	if err != nil {
 		if !os.IsExist(err) {
 			return err
@@ -89,7 +89,7 @@ func (r Registry) withLock(task func() error, description string) (err error) {
 		}
 		lastWrite := fi.ModTime()
 		if lastWrite.Add(10 * time.Second).Before(time.Now()) {
-			f, err = os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
+			f, err = os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0666)
 			if err != nil {
 				return err
 			}
@@ -330,12 +330,12 @@ func (r Registry) GetOrDownload(group, name string, version *UniversalPackageVer
 		return nil, nil, err
 	}
 
-	err = os.MkdirAll(filepath.Dir(cachePath), 0755)
+	err = os.MkdirAll(filepath.Dir(cachePath), 0777)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	f, err = os.OpenFile(cachePath, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0644)
+	f, err = os.OpenFile(cachePath, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0666)
 	if err != nil {
 		return nil, nil, err
 	}
