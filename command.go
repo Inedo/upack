@@ -194,13 +194,24 @@ func UnpackZip(targetDirectory string, overwrite bool, zipFile *zip.Reader) erro
 		targetPath := filepath.Join(targetDirectory, entry.Name[len("package/"):])
 
 		if entry.Mode().IsDir() {
-			err = os.MkdirAll(targetPath, entry.Mode())
+			err = os.MkdirAll(targetPath, 0777)
 			if err != nil {
 				return err
 			}
+			fi, err := os.Stat(targetPath)
+			if err != nil {
+				return err
+			}
+			// Honor umask and make sure directory execute is set if directory read is set.
+			mode := (entry.Mode() | (entry.Mode()&0444)>>2) & fi.Mode()
+			err = os.Chmod(targetPath, mode)
+			if err != nil {
+				return err
+			}
+
 			directories++
 		} else {
-			err = os.MkdirAll(filepath.Dir(targetPath), entry.Mode())
+			err = os.MkdirAll(filepath.Dir(targetPath), 0777)
 			if err != nil {
 				return err
 			}
