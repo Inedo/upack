@@ -12,6 +12,7 @@ var commands = CommandDispatcher{
 	&Unpack{},
 	&Install{},
 	&List{},
+	&BuildDependencyTree{},
 }
 
 type CommandDispatcher []Command
