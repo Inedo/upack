@@ -213,7 +213,7 @@ namespace Inedo.ProGet.UPack
             Console.WriteLine($"Version: {info.Version}");
         }
 
-        internal static async Task UnpackZipAsync(string targetDirectory, bool overwrite, ZipReader zipFile)
+        internal static async Task UnpackZipAsync(string targetDirectory, bool overwrite, ZipReader zipFile, bool perserveTimestamps)
         {
             Directory.CreateDirectory(targetDirectory);
 
@@ -241,6 +241,12 @@ namespace Inedo.ProGet.UPack
                     }
 
                     File.SetAttributes(targetPath, entry.Header.Mode);
+
+                    // Assume files with timestamps set to 0 (DOS time) or close to 0 are not timestamped.
+                    if (perserveTimestamps && entry.Header.ModTime.Year > 1980)
+                    {
+                        File.SetLastWriteTimeUtc(targetPath, entry.Header.ModTime.DateTime);
+                    }
 
                     files++;
                 }
