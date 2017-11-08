@@ -71,14 +71,18 @@ namespace Inedo.ProGet.UPack
         [DefaultValue(false)]
         public bool CachePackages { get; set; } = false;
 
+        [DisplayName("perserve-timestamps")]
+        [Description("Set extracted file timestamps to the timestamp of the file in the archive instead of the current time.")]
+        [ExtraArgument]
+        [DefaultValue(false)]
+        public bool PerserveTimestamps { get; set; } = false;
+
         public override async Task<int> RunAsync()
         {
             using (var stream = await this.OpenPackageAsync())
+            using (var zip = new ZipArchive(stream, ZipArchiveMode.Read, true))
             {
-                using (var zip = new ZipArchive(stream, ZipArchiveMode.Read, true))
-                {
-                    await UnpackZipAsync(this.TargetDirectory, this.Overwrite, zip);
-                }
+                await UnpackZipAsync(this.TargetDirectory, this.Overwrite, zip, this.PerserveTimestamps);
             }
 
             return 0;

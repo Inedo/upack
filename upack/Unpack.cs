@@ -1,8 +1,6 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -27,6 +25,12 @@ namespace Inedo.ProGet.UPack
         [DefaultValue(false)]
         public bool Overwrite { get; set; } = false;
 
+        [DisplayName("perserve-timestamps")]
+        [Description("Set extracted file timestamps to the timestamp of the file in the archive instead of the current time.")]
+        [ExtraArgument]
+        [DefaultValue(false)]
+        public bool PerserveTimestamps { get; set; } = false;
+
         public override async Task<int> RunAsync()
         {
             using (var zipStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read))
@@ -40,7 +44,7 @@ namespace Inedo.ProGet.UPack
                     PrintManifest(info);
                 }
 
-                await UnpackZipAsync(this.Target, this.Overwrite, zipFile);
+                await UnpackZipAsync(this.Target, this.Overwrite, zipFile, this.PerserveTimestamps);
             }
 
             return 0;
