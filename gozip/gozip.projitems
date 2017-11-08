@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>7d0c005f-f7ca-47ca-b7fc-7d3ceb963910</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Golang</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Archive\Zip\Compressors.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Hash\CRC32.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IO\NopCloser.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IO\SectionReader.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Archive\Zip\Struct.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Archive\Zip\ZipReader.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Archive\Zip\ZipWriter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" />
+  </ItemGroup>
+</Project>

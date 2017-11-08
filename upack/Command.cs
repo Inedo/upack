@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Golang.Archive.Zip;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -213,20 +213,20 @@ namespace Inedo.ProGet.UPack
             Console.WriteLine($"Version: {info.Version}");
         }
 
-        internal static async Task UnpackZipAsync(string targetDirectory, bool overwrite, ZipArchive zipFile)
+        internal static async Task UnpackZipAsync(string targetDirectory, bool overwrite, ZipReader zipFile)
         {
             Directory.CreateDirectory(targetDirectory);
 
-            var entries = zipFile.Entries.Where(e => e.FullName.StartsWith("package/", StringComparison.OrdinalIgnoreCase));
+            var entries = zipFile.File.Where(e => e.Header.Name.StartsWith("package/", StringComparison.OrdinalIgnoreCase));
 
             int files = 0;
             int directories = 0;
 
             foreach (var entry in entries)
             {
-                var targetPath = Path.Combine(targetDirectory, entry.FullName.Substring("package/".Length).Replace('/', Path.DirectorySeparatorChar));
+                var targetPath = Path.Combine(targetDirectory, entry.Header.Name.Substring("package/".Length).Replace('/', Path.DirectorySeparatorChar));
 
-                if (entry.FullName.EndsWith("/"))
+                if (entry.Header.Mode.HasFlag(FileAttributes.Directory))
                 {
                     Directory.CreateDirectory(targetPath);
                     directories++;
@@ -235,10 +235,12 @@ namespace Inedo.ProGet.UPack
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
                     using (var entryStream = entry.Open())
-                    using (var targetStream = new FileStream(targetPath, overwrite ? FileMode.Create : FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    using (var targetStream = new FileStream(targetPath, overwrite ? FileMode.Create : FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, true))
                     {
                         await entryStream.CopyToAsync(targetStream);
                     }
+
+                    File.SetAttributes(targetPath, entry.Header.Mode);
 
                     files++;
                 }
@@ -247,46 +249,42 @@ namespace Inedo.ProGet.UPack
             Console.WriteLine($"Extracted {files} files and {directories} directories.");
         }
 
-        internal static async Task CreateEntryFromFileAsync(ZipArchive zipFile, string fileName, string entryPath)
+        internal static async Task CreateEntryFromFileAsync(ZipWriter zipFile, string fileName, string entryPath)
         {
-            var entry = zipFile.CreateEntry(entryPath);
+            var header = ZipFileHeader.FileInfoHeader(new FileInfo(fileName));
+            header.Name = entryPath;
 
-            using (var input = new FileStream(fileName, FileMode.Open, FileAccess.Read))
-            using (var output = entry.Open())
+            using (var entry = zipFile.CreateHeader(header))
+            using (var input = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
             {
-                await input.CopyToAsync(output);
+                await input.CopyToAsync(entry);
             }
         }
 
-        internal static async Task CreateEntryFromStreamAsync(ZipArchive zipFile, Stream file, string entryPath)
+        internal static async Task CreateEntryFromStreamAsync(ZipWriter zipFile, Stream file, string entryPath)
         {
-            var entry = zipFile.CreateEntry(entryPath);
-            
-            using (var output = entry.Open())
+            using (var entry = zipFile.Create(entryPath))
             {
                 file.Position = 0;
-                await file.CopyToAsync(output);
+                await file.CopyToAsync(entry);
             }
         }
 
-        internal static async Task AddDirectoryAsync(ZipArchive zipFile, string sourceDirectory, string entryRootPath)
+        internal static async Task AddDirectoryAsync(ZipWriter zipFile, string sourceDirectory, string entryRootPath)
         {
-            bool hasContent = false;
+            var header = ZipFileHeader.FileInfoHeader(new DirectoryInfo(sourceDirectory));
+            header.Name = entryRootPath;
+            zipFile.CreateHeader(header).Dispose();
 
             foreach (var fileName in Directory.EnumerateFiles(sourceDirectory))
             {
                 await CreateEntryFromFileAsync(zipFile, fileName, entryRootPath + Path.GetFileName(fileName));
-                hasContent = true;
             }
 
             foreach (var directoryName in Directory.EnumerateDirectories(sourceDirectory))
             {
-                hasContent = true;
                 await AddDirectoryAsync(zipFile, directoryName, entryRootPath + Path.GetFileName(directoryName) + "/");
             }
-
-            if (!hasContent)
-                zipFile.CreateEntry(entryRootPath);
         }
 
         internal static async Task<string> GetVersionAsync(string source, string group, string name, string version, NetworkCredential credentials, bool prerelease)

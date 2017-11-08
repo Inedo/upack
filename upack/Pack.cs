@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Golang.Archive.Zip;
+using System;
 using System.ComponentModel;
 using System.IO;
-using System.IO.Compression;
-using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
 
@@ -102,21 +101,21 @@ namespace Inedo.ProGet.UPack
             var serializer = new DataContractJsonSerializer(typeof(PackageMetadata));
 
             var fileName = Path.Combine(this.TargetDirectory, $"{info.Name}-{info.BareVersion}.upack");
-            using (var zipStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
-            using (var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
+            using (var zipFile = new ZipWriter(new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true)))
             {
                 if (useMetadata)
+                {
                     await CreateEntryFromFileAsync(zipFile, this.Manifest, "upack.json");
+                }
                 else
-                    await Task.Run(async () =>
+                {
+                    using (var metadata = new MemoryStream())
                     {
-                        using (var metadata = new MemoryStream())
-                        {
-                            serializer.WriteObject(metadata, info);
-                            await CreateEntryFromStreamAsync(zipFile, metadata, "upack.json");
-                        }
-                    });
-                
+                        serializer.WriteObject(metadata, info);
+                        await CreateEntryFromStreamAsync(zipFile, metadata, "upack.json");
+                    }
+                }
+
                 await AddDirectoryAsync(zipFile, this.SourceDirectory, "package/");
             }
 

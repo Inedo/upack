@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Golang.Archive.Zip;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.IO.Compression;
@@ -74,11 +75,9 @@ namespace Inedo.ProGet.UPack
         public override async Task<int> RunAsync()
         {
             using (var stream = await this.OpenPackageAsync())
+            using (var zip = new ZipReader(stream, true))
             {
-                using (var zip = new ZipArchive(stream, ZipArchiveMode.Read, true))
-                {
-                    await UnpackZipAsync(this.TargetDirectory, this.Overwrite, zip);
-                }
+                await UnpackZipAsync(this.TargetDirectory, this.Overwrite, zip);
             }
 
             return 0;

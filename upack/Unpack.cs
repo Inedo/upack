@@ -1,7 +1,6 @@
-﻿using System;
+﻿using Golang.Archive.Zip;
 using System.ComponentModel;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -29,10 +28,10 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync()
         {
-            using (var zipStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read))
-            using (var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Read, true))
+            using (var zipStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+            using (var zipFile = new ZipReader(zipStream, true))
             {
-                var metadataEntry = zipFile.GetEntry("upack.json");
+                var metadataEntry = zipFile.File.Where(f => string.Equals(f.Header.Name, "upack.json")).First();
                 using (var metadataStream = metadataEntry.Open())
                 {
                     var info = await ReadManifestAsync(metadataStream);
