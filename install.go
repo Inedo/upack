@@ -21,7 +21,7 @@ type Install struct {
 	UserRegistry       bool
 	Unregistered       bool
 	CachePackages      bool
-	PerserveTimestamps bool
+	PreserveTimestamps bool
 }
 
 func (*Install) Name() string { return "install" }
@@ -129,11 +129,11 @@ func (*Install) ExtraArguments() []ExtraArgument {
 			}),
 		},
 		{
-			Name:        "perserve-timestamps",
+			Name:        "preserve-timestamps",
 			Description: "Set extracted file timestamps to the timestamp of the file in the archive instead of the current time.",
 			Flag:        true,
-			TrySetValue: trySetBoolValue("perserve-timestamps", func(cmd Command) *bool {
-				return &cmd.(*Install).PerserveTimestamps
+			TrySetValue: trySetBoolValue("preserve-timestamps", func(cmd Command) *bool {
+				return &cmd.(*Install).PreserveTimestamps
 			}),
 		},
 	}
@@ -153,7 +153,7 @@ func (i *Install) Run() int {
 		return 1
 	}
 
-	err = UnpackZip(i.TargetDirectory, i.Overwrite, zip, i.PerserveTimestamps)
+	err = UnpackZip(i.TargetDirectory, i.Overwrite, zip, i.PreserveTimestamps)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1

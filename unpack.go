@@ -10,7 +10,7 @@ type Unpack struct {
 	Package            string
 	Target             string
 	Overwrite          bool
-	PerserveTimestamps bool
+	PreserveTimestamps bool
 }
 
 func (*Unpack) Name() string { return "unpack" }
@@ -52,11 +52,11 @@ func (*Unpack) ExtraArguments() []ExtraArgument {
 			}),
 		},
 		{
-			Name:        "perserve-timestamps",
+			Name:        "preserve-timestamps",
 			Description: "Set extracted file timestamps to the timestamp of the file in the archive instead of the current time.",
 			Flag:        true,
-			TrySetValue: trySetBoolValue("perserve-timestamps", func(cmd Command) *bool {
-				return &cmd.(*Unpack).PerserveTimestamps
+			TrySetValue: trySetBoolValue("preserve-timestamps", func(cmd Command) *bool {
+				return &cmd.(*Unpack).PreserveTimestamps
 			}),
 		},
 	}
@@ -89,7 +89,7 @@ func (u *Unpack) Run() int {
 		return 1
 	}
 
-	err = UnpackZip(u.Target, u.Overwrite, &zipFile.Reader, u.PerserveTimestamps)
+	err = UnpackZip(u.Target, u.Overwrite, &zipFile.Reader, u.PreserveTimestamps)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1

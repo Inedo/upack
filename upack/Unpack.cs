@@ -25,11 +25,11 @@ namespace Inedo.ProGet.UPack
         [DefaultValue(false)]
         public bool Overwrite { get; set; } = false;
 
-        [DisplayName("perserve-timestamps")]
+        [DisplayName("preserve-timestamps")]
         [Description("Set extracted file timestamps to the timestamp of the file in the archive instead of the current time.")]
         [ExtraArgument]
         [DefaultValue(false)]
-        public bool PerserveTimestamps { get; set; } = false;
+        public bool PreserveTimestamps { get; set; } = false;
 
         public override async Task<int> RunAsync()
         {
@@ -44,7 +44,7 @@ namespace Inedo.ProGet.UPack
                     PrintManifest(info);
                 }
 
-                await UnpackZipAsync(this.Target, this.Overwrite, zipFile, this.PerserveTimestamps);
+                await UnpackZipAsync(this.Target, this.Overwrite, zipFile, this.PreserveTimestamps);
             }
 
             return 0;
