@@ -177,7 +177,7 @@ func PrintManifest(info *PackageMetadata) {
 	fmt.Println("Version:", info.Version)
 }
 
-func UnpackZip(targetDirectory string, overwrite bool, zipFile *zip.Reader) error {
+func UnpackZip(targetDirectory string, overwrite bool, zipFile *zip.Reader, perserveTimestamps bool) error {
 	err := os.MkdirAll(targetDirectory, 0777)
 	if err != nil {
 		return err
@@ -215,7 +215,7 @@ func UnpackZip(targetDirectory string, overwrite bool, zipFile *zip.Reader) erro
 			if err != nil {
 				return err
 			}
-			err = saveEntryToFile(entry, targetPath, overwrite)
+			err = saveEntryToFile(entry, targetPath, overwrite, perserveTimestamps)
 			if err != nil {
 				return err
 			}
@@ -228,7 +228,7 @@ func UnpackZip(targetDirectory string, overwrite bool, zipFile *zip.Reader) erro
 	return nil
 }
 
-func saveEntryToFile(entry *zip.File, targetPath string, overwrite bool) (err error) {
+func saveEntryToFile(entry *zip.File, targetPath string, overwrite, perserveTimestamps bool) (err error) {
 	r, err := entry.Open()
 	if err != nil {
 		return
@@ -255,6 +255,17 @@ func saveEntryToFile(entry *zip.File, targetPath string, overwrite bool) (err er
 	}()
 
 	_, err = io.Copy(f, r)
+	if err != nil {
+		return
+	}
+
+	if perserveTimestamps && entry.ModTime().Year() > 1980 {
+		err = os.Chtimes(targetPath, entry.ModTime(), entry.ModTime())
+		if err != nil {
+			return
+		}
+	}
+
 	return
 }
 
