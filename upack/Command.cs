@@ -142,7 +142,7 @@ namespace Inedo.ProGet.UPack
                     s = $"[{s}]";
                 }
 
-                if (p.PropertyType == typeof(bool) && this.DefaultValue == (object)false && this.Optional)
+                if (p.PropertyType == typeof(bool) && this.DefaultValue.Equals(false) && this.Optional)
                 {
                     s = $"[--{this.DisplayName}]";
                 }
