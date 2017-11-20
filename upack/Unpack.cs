@@ -33,7 +33,7 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync()
         {
-            using (var zipStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read))
+            using (var zipStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             using (var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Read, true))
             {
                 var metadataEntry = zipFile.GetEntry("upack.json");

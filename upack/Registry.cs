@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -70,7 +71,7 @@ namespace Inedo.ProGet.UPack
             Stream stream;
             try
             {
-                stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                stream = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous);
             }
             catch (IOException ex)
             {
@@ -82,7 +83,7 @@ namespace Inedo.ProGet.UPack
                 var lastWrite = File.GetLastWriteTime(lockPath);
                 if (lastWrite + TimeSpan.FromSeconds(10) < DateTime.Now)
                 {
-                    stream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                    stream = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.Asynchronous);
                     if (File.GetLastWriteTime(lockPath) != lastWrite && stream.Length != 0)
                     {
                         string lockDescription = null;
@@ -232,7 +233,10 @@ namespace Inedo.ProGet.UPack
                 UseDefaultCredentials = feedAuthentication == null,
                 Credentials = feedAuthentication,
                 PreAuthenticate = true
-            }))
+            })
+            {
+                Timeout = Timeout.InfiniteTimeSpan
+            })
             {
                 string encodedName = Uri.EscapeUriString(name);
                 if (!string.IsNullOrEmpty(group))
@@ -255,7 +259,7 @@ namespace Inedo.ProGet.UPack
         {
             if (this.path == null || !cache)
             {
-                var tempFile = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 0, FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+                var tempFile = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.DeleteOnClose);
                 try
                 {
                     await this.CachePackageToDisk(tempFile, group, name, version, feedUrl, feedAuthentication);

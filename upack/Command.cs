@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization.Json;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -235,7 +236,7 @@ namespace Inedo.ProGet.UPack
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
                     using (var entryStream = entry.Open())
-                    using (var targetStream = new FileStream(targetPath, overwrite ? FileMode.Create : FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    using (var targetStream = new FileStream(targetPath, overwrite ? FileMode.Create : FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
                     {
                         await entryStream.CopyToAsync(targetStream);
                     }
@@ -257,7 +258,7 @@ namespace Inedo.ProGet.UPack
         {
             var entry = zipFile.CreateEntry(entryPath);
 
-            using (var input = new FileStream(fileName, FileMode.Open, FileAccess.Read))
+            using (var input = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             using (var output = entry.Open())
             {
                 await input.CopyToAsync(output);
@@ -303,7 +304,7 @@ namespace Inedo.ProGet.UPack
             }
 
             using (var client = CreateClient(credentials))
-            using (var response = await client.GetAsync($"{source.TrimEnd('/')}/packages?group={Uri.EscapeDataString(group)}&name={Uri.EscapeDataString(name)}"))
+            using (var response = await client.GetAsync($"{source.TrimEnd('/')}/packages?group={Uri.EscapeDataString(group ?? string.Empty)}&name={Uri.EscapeDataString(name)}"))
             {
                 response.EnsureSuccessStatusCode();
 
@@ -327,7 +328,10 @@ namespace Inedo.ProGet.UPack
                 UseDefaultCredentials = credentials == null,
                 Credentials = credentials,
                 PreAuthenticate = true,
-            });
+            })
+            {
+                Timeout = Timeout.InfiniteTimeSpan
+            };
         }
     }
 }

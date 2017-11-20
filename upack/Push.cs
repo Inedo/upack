@@ -30,7 +30,7 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync()
         {
-            using (var packageStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read))
+            using (var packageStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             {
                 PackageMetadata info;
 

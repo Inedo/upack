@@ -102,7 +102,7 @@ namespace Inedo.ProGet.UPack
             var serializer = new DataContractJsonSerializer(typeof(PackageMetadata));
 
             var fileName = Path.Combine(this.TargetDirectory, $"{info.Name}-{info.BareVersion}.upack");
-            using (var zipStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
+            using (var zipStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
             using (var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
             {
                 if (useMetadata)
