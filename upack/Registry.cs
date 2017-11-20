@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -232,7 +233,10 @@ namespace Inedo.ProGet.UPack
                 UseDefaultCredentials = feedAuthentication == null,
                 Credentials = feedAuthentication,
                 PreAuthenticate = true
-            }))
+            })
+            {
+                Timeout = Timeout.InfiniteTimeSpan
+            })
             {
                 string encodedName = Uri.EscapeUriString(name);
                 if (!string.IsNullOrEmpty(group))
