@@ -79,6 +79,12 @@ namespace Inedo.ProGet.UPack
             }
             else
             {
+                if (!File.Exists(this.Manifest))
+                {
+                    Console.Error.WriteLine($"The manifest file '{Manifest}' does not exist.");
+                    return 2;
+                }
+
                 useMetadata = true;
                 using (var metadataStream = File.OpenRead(this.Manifest))
                 {
@@ -100,6 +106,12 @@ namespace Inedo.ProGet.UPack
             PrintManifest(info);
 
             var serializer = new DataContractJsonSerializer(typeof(PackageMetadata));
+
+            if (!Directory.Exists(SourceDirectory))
+            {
+                Console.Error.WriteLine($"The source directory '{SourceDirectory}' does not exist.");
+                return 2;
+            }
 
             var fileName = Path.Combine(this.TargetDirectory, $"{info.Name}-{info.BareVersion}.upack");
             using (var zipStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
