@@ -28,7 +28,7 @@ namespace Inedo.ProGet.UPack
 
         [DisplayName("target")]
         [Description("Directory where the contents of the package will be extracted.")]
-        [ExtraArgument(Optional = false)]
+        [ExtraArgument(Optional = true)]
         public string TargetDirectory { get; set; }
 
         [DisplayName("user")]
@@ -79,10 +79,14 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync()
         {
+            var targetDirectory = TargetDirectory;
+            if (String.IsNullOrEmpty(targetDirectory))
+                targetDirectory = Environment.CurrentDirectory;
+
             using (var stream = await this.OpenPackageAsync())
             using (var zip = new ZipArchive(stream, ZipArchiveMode.Read, true))
             {
-                await UnpackZipAsync(this.TargetDirectory, this.Overwrite, zip, this.PreserveTimestamps);
+                await UnpackZipAsync(targetDirectory, this.Overwrite, zip, this.PreserveTimestamps);
             }
 
             return 0;
