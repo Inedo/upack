@@ -1,9 +1,8 @@
-﻿using System;
+﻿using Inedo.UPack;
+using Inedo.UPack.Packaging;
+using System;
 using System.ComponentModel;
 using System.IO;
-using System.IO.Compression;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -12,7 +11,8 @@ namespace Inedo.ProGet.UPack
     [Description("Creates a new ProGet universal package using specified metadata and source directory.")]
     public sealed class Pack : Command
     {
-        [DisplayName("metadata")]
+        [DisplayName("manifest")]
+        [AlternateName("metadata")]
         [Description("Path of a valid upack.json metadata file.")]
         [ExtraArgument]
         public string Manifest { get; set; }
@@ -62,19 +62,18 @@ namespace Inedo.ProGet.UPack
         {
             this.TargetDirectory = this.TargetDirectory ?? Environment.CurrentDirectory;
 
-            PackageMetadata info;
-            bool useMetadata = false;
+            UniversalPackageMetadata info;
 
             if (string.IsNullOrWhiteSpace(this.Manifest))
             {
-                info = new PackageMetadata
+                info = new UniversalPackageMetadata
                 {
                     Group = this.Group,
                     Name = this.Name,
-                    Version = this.Version,
+                    Version = UniversalPackageVersion.TryParse(this.Version),
                     Title = this.Title,
                     Description = this.PackageDescription,
-                    IconUrl = this.IconUrl
+                    Icon = this.IconUrl
                 };
             }
             else
@@ -85,7 +84,6 @@ namespace Inedo.ProGet.UPack
                     return 2;
                 }
 
-                useMetadata = true;
                 using (var metadataStream = File.OpenRead(this.Manifest))
                 {
                     info = await ReadManifestAsync(metadataStream);
@@ -97,7 +95,7 @@ namespace Inedo.ProGet.UPack
                 Console.Error.WriteLine("Missing package name.");
                 return 2;
             }
-            if (string.IsNullOrEmpty(info.Version))
+            if (info.Version == null)
             {
                 Console.Error.WriteLine("Missing package version.");
                 return 2;
@@ -105,31 +103,16 @@ namespace Inedo.ProGet.UPack
 
             PrintManifest(info);
 
-            var serializer = new DataContractJsonSerializer(typeof(PackageMetadata));
-
             if (!Directory.Exists(SourceDirectory))
             {
                 Console.Error.WriteLine($"The source directory '{SourceDirectory}' does not exist.");
                 return 2;
             }
 
-            var fileName = Path.Combine(this.TargetDirectory, $"{info.Name}-{info.BareVersion}.upack");
-            using (var zipStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
-            using (var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Create, true))
+            var fileName = Path.Combine(this.TargetDirectory, $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack");
+            using (var builder = new UniversalPackageBuilder(fileName, info))
             {
-                if (useMetadata)
-                    await CreateEntryFromFileAsync(zipFile, this.Manifest, "upack.json");
-                else
-                    await Task.Run(async () =>
-                    {
-                        using (var metadata = new MemoryStream())
-                        {
-                            serializer.WriteObject(metadata, info);
-                            await CreateEntryFromStreamAsync(zipFile, metadata, "upack.json");
-                        }
-                    });
-                
-                await AddDirectoryAsync(zipFile, this.SourceDirectory, "package/");
+                await builder.AddContentsAsync(this.SourceDirectory, "package/", true);
             }
 
             return 0;

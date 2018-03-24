@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Inedo.UPack.Packaging;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 
@@ -16,22 +18,41 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync()
         {
-            var packages = await (this.UserRegistry ? Registry.User : Registry.Machine).ListInstalledPackagesAsync();
+            IReadOnlyList<RegisteredPackage> packages;
+            using (var registry = PackageRegistry.GetRegistry(this.UserRegistry))
+            {
+                await registry.LockAsync();
+                try
+                {
+                    packages = await registry.GetInstalledPackagesAsync();
+                }
+                finally
+                {
+                    await registry.UnlockAsync();
+                }
+            }
 
             foreach (var pkg in packages)
             {
-                Console.WriteLine($"{pkg.GroupAndName} {pkg.Version}");
+                if (!string.IsNullOrEmpty(pkg.Group))
+                {
+                    Console.WriteLine($"{pkg.Group}:{pkg.Name} {pkg.Version}");
+                }
+                else
+                {
+                    Console.WriteLine($"{pkg.Name} {pkg.Version}");
+                }
                 if (!string.IsNullOrEmpty(pkg.FeedUrl))
                 {
                     Console.WriteLine($"From {pkg.FeedUrl}");
                 }
-                if (!string.IsNullOrEmpty(pkg.Path) || pkg.InstallationDate.HasValue)
+                if (!string.IsNullOrEmpty(pkg.InstallPath) || pkg.InstallationDate != null)
                 {
-                    Console.WriteLine($"Installed to {pkg.Path ?? "<unknown path>"} on {pkg.InstallationDate?.ToString() ?? "<unknown date>"}");
+                    Console.WriteLine($"Installed to {(string.IsNullOrEmpty(pkg.InstallPath) ? "<unknown path>" : pkg.InstallPath)} on {(string.IsNullOrEmpty(pkg.InstallationDate) ? "<unknown date>" : pkg.InstallationDate)}");
                 }
                 if (!string.IsNullOrEmpty(pkg.InstalledBy) || !string.IsNullOrEmpty(pkg.InstalledUsing))
                 {
-                    Console.WriteLine($"Installed by {pkg.InstalledBy ?? "<unknown user>"} using {pkg.InstalledUsing ?? "<unknown application>"}");
+                    Console.WriteLine($"Installed by {(string.IsNullOrEmpty(pkg.InstalledBy) ? "<unknown user>" : pkg.InstalledBy)} using {(string.IsNullOrEmpty(pkg.InstalledUsing) ? "<unknown application>" : pkg.InstalledUsing)}");
                 }
                 if (!string.IsNullOrEmpty(pkg.InstallationReason))
                 {

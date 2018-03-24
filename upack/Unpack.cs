@@ -1,6 +1,6 @@
-﻿using System.ComponentModel;
-using System.IO;
-using System.IO.Compression;
+﻿using Inedo.UPack.Packaging;
+using System;
+using System.ComponentModel;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -33,18 +33,22 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync()
         {
-            using (var zipStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
-            using (var zipFile = new ZipArchive(zipStream, ZipArchiveMode.Read, true))
+            UniversalPackage package;
+            try
             {
-                var metadataEntry = zipFile.GetEntry("upack.json");
-                using (var metadataStream = metadataEntry.Open())
-                {
-                    var info = await ReadManifestAsync(metadataStream);
+                package = new UniversalPackage(this.Package);
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException("The specified file is not a valid universal package: " + ex.Message, ex);
+            }
 
-                    PrintManifest(info);
-                }
+            using (package)
+            {
+                var info = package.GetFullMetadata();
+                PrintManifest(info);
 
-                await UnpackZipAsync(this.Target, this.Overwrite, zipFile, this.PreserveTimestamps);
+                await UnpackZipAsync(this.Target, this.Overwrite, package, this.PreserveTimestamps);
             }
 
             return 0;

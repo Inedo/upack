@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Inedo.UPack;
+using Inedo.UPack.Packaging;
+using System;
 using System.ComponentModel;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -79,35 +81,73 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync()
         {
-            var targetDirectory = TargetDirectory;
+            var targetDirectory = this.TargetDirectory;
             if (String.IsNullOrEmpty(targetDirectory))
                 targetDirectory = Environment.CurrentDirectory;
 
-            using (var stream = await this.OpenPackageAsync())
-            using (var zip = new ZipArchive(stream, ZipArchiveMode.Read, true))
+            var client = CreateClient(this.SourceUrl, this.Authentication);
+            UniversalPackageId id;
+            try
             {
-                await UnpackZipAsync(targetDirectory, this.Overwrite, zip, this.PreserveTimestamps);
+                id = UniversalPackageId.Parse(this.PackageName);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ApplicationException("Invalid package ID: " + ex.Message, ex);
+            }
+            var version = await GetVersionAsync(client, id, this.Version, this.Prerelease);
+            
+            Stream stream = null;
+            if (!this.Unregistered)
+            {
+                using (var registry = PackageRegistry.GetRegistry(this.UserRegistry))
+                {
+                    await registry.LockAsync();
+                    try
+                    {
+                        if (this.CachePackages)
+                        {
+                            stream = await registry.TryOpenFromCacheAsync(id, version);
+                        }
+
+                        await registry.RegisterPackageAsync(new RegisteredPackage
+                        {
+                            FeedUrl = this.SourceUrl,
+                            Group = id.Group,
+                            Name = id.Name,
+                            Version = version.ToString(),
+                            InstallPath = this.TargetDirectory,
+                            InstallationDate = DateTimeOffset.Now.ToString("o"),
+                            InstallationReason = this.Comment,
+                            InstalledBy = Environment.UserName,
+                            InstalledUsing = Assembly.GetEntryAssembly().GetName().Name + "/" + Assembly.GetEntryAssembly().GetName().Version.ToString()
+                        });
+                    }
+                    finally
+                    {
+                        await registry.UnlockAsync();
+                    }
+                }
+            }
+
+            if (stream == null)
+            {
+                try
+                {
+                    stream = await client.GetPackageStreamAsync(id, version);
+                }
+                catch (WebException ex)
+                {
+                    throw ConvertWebException(ex, PackageNotFoundMessage);
+                }
+            }
+
+            using (var package = new UniversalPackage(stream))
+            {
+                await UnpackZipAsync(this.TargetDirectory, this.Overwrite, package, this.PreserveTimestamps);
             }
 
             return 0;
-        }
-
-        private async Task<Stream> OpenPackageAsync()
-        {
-            var r = this.Unregistered ? Registry.Unregistered : this.UserRegistry ? Registry.User : Registry.Machine;
-            string group = null, name = null, version = null;
-
-            var parts = this.PackageName.Split(new[] { ':', '/' });
-            group = parts.Length > 1 ? string.Join("/", new ArraySegment<string>(parts, 0, parts.Length - 1)) : null;
-            name = parts[parts.Length - 1];
-
-            version = await GetVersionAsync(this.SourceUrl, group, name, this.Version, this.Authentication, this.Prerelease);
-
-            await r.RegisterPackageAsync(group, name, UniversalPackageVersion.Parse(version),
-                this.TargetDirectory, this.SourceUrl, this.Authentication,
-                this.Comment, null, Environment.UserName);
-
-            return await r.GetOrDownloadAsync(group, name, UniversalPackageVersion.Parse(version), this.SourceUrl, this.Authentication, this.CachePackages);
         }
     }
 }

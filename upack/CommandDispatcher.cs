@@ -99,13 +99,14 @@ namespace Inedo.ProGet.UPack
 
                     foreach (var arg in cmd.ExtraArguments)
                     {
-                        if (extra.ContainsKey(arg.DisplayName))
+                        var alt = arg.AlternateNames.FirstOrDefault(extra.ContainsKey);
+                        if (extra.ContainsKey(arg.DisplayName) || alt != null)
                         {
-                            if (!arg.TrySetValue(cmd, extra[arg.DisplayName]))
+                            if (!arg.TrySetValue(cmd, extra[alt ?? arg.DisplayName]))
                             {
                                 hadError = true;
                             }
-                            extra.Remove(arg.DisplayName);
+                            extra.Remove(alt ?? arg.DisplayName);
                         }
                         else if (!arg.Optional)
                         {
@@ -136,7 +137,15 @@ namespace Inedo.ProGet.UPack
             }
             else
             {
-                Environment.ExitCode = cmd.RunAsync().GetAwaiter().GetResult();
+                try
+                {
+                    Environment.ExitCode = cmd.RunAsync().GetAwaiter().GetResult();
+                }
+                catch (ApplicationException ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    Environment.ExitCode = 1;
+                }
             }
         }
 

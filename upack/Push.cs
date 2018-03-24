@@ -1,10 +1,8 @@
-﻿using System;
+﻿using Inedo.UPack.Packaging;
+using System;
 using System.ComponentModel;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -32,35 +30,39 @@ namespace Inedo.ProGet.UPack
         {
             using (var packageStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             {
-                PackageMetadata info;
+                UniversalPackageMetadata info;
 
-                using (var zipFile = new ZipArchive(packageStream, ZipArchiveMode.Read, true))
+                try
                 {
-                    var entry = zipFile.GetEntry("upack.json");
-                    using (var metadataStream = entry.Open())
+                    using (var package = new UniversalPackage(packageStream, true))
                     {
-                        info = await ReadManifestAsync(metadataStream);
+                        info = package.GetFullMetadata();
                     }
+                }
+                catch (Exception ex)
+                {
+                    throw new ApplicationException("The specified file is not a valid universal package: " + ex.Message, ex);
                 }
 
                 packageStream.Position = 0;
 
+                var client = CreateClient(this.Target, this.Authentication);
+
                 PrintManifest(info);
 
-                using (var client = CreateClient(this.Authentication))
+                try
                 {
-                    using (var response = await client.PutAsync(this.Target, new StreamContent(packageStream)
-                    {
-                        Headers =
-                        {
-                            ContentType = new MediaTypeHeaderValue("application/octet-stream")
-                        }
-                    }))
-                    {
-                        response.EnsureSuccessStatusCode();
-                        Console.WriteLine($"{info.GroupAndName} {info.Version} published!");
-                    }
+                    await client.UploadPackageAsync(packageStream);
                 }
+                catch (WebException ex)
+                {
+                    throw ConvertWebException(ex);
+                }
+
+                if (!string.IsNullOrEmpty(info.Group))
+                    Console.WriteLine($"{info.Group}:{info.Name} {info.Version} published!");
+                else
+                    Console.WriteLine($"{info.Name} {info.Version} published!");
             }
 
             return 0;

@@ -1,15 +1,15 @@
-﻿using System;
+﻿using Inedo.UPack;
+using Inedo.UPack.Net;
+using Inedo.UPack.Packaging;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Reflection;
-using System.Runtime.Serialization.Json;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -32,6 +32,17 @@ namespace Inedo.ProGet.UPack
         public sealed class ExtraArgumentAttribute : Attribute
         {
             public bool Optional { get; set; } = true;
+        }
+
+        [AttributeUsage(AttributeTargets.Property, AllowMultiple = true, Inherited = true)]
+        public sealed class AlternateNameAttribute : Attribute
+        {
+            public string Name { get; }
+
+            public AlternateNameAttribute(string name)
+            {
+                this.Name = name;
+            }
         }
 
         public abstract class Argument
@@ -131,6 +142,7 @@ namespace Inedo.ProGet.UPack
             {
             }
 
+            public IEnumerable<string> AlternateNames => p.GetCustomAttributes<AlternateNameAttribute>().Select(a => a.Name);
             public override bool Optional => p.GetCustomAttribute<ExtraArgumentAttribute>().Optional;
 
             public override string GetUsage()
@@ -202,32 +214,36 @@ namespace Inedo.ProGet.UPack
             return s.ToString();
         }
 
-        internal static async Task<PackageMetadata> ReadManifestAsync(Stream metadataStream)
+        internal static async Task<UniversalPackageMetadata> ReadManifestAsync(Stream metadataStream)
         {
-            var serializer = new DataContractJsonSerializer(typeof(PackageMetadata));
-            return await Task.Run(() => (PackageMetadata)serializer.ReadObject(metadataStream));
+            var text = await new StreamReader(metadataStream).ReadToEndAsync();
+            return JsonConvert.DeserializeObject<UniversalPackageMetadata>(text);
         }
 
-        internal static void PrintManifest(PackageMetadata info)
+        internal static void PrintManifest(UniversalPackageMetadata info)
         {
-            Console.WriteLine($"Package: {info.GroupAndName}");
+            if (!string.IsNullOrEmpty(info.Group))
+                Console.WriteLine($"Package: {info.Group}:{info.Name}");
+            else
+                Console.WriteLine($"Package: {info.Name}");
+
             Console.WriteLine($"Version: {info.Version}");
         }
 
-        internal static async Task UnpackZipAsync(string targetDirectory, bool overwrite, ZipArchive zipFile, bool preserveTimestamps)
+        internal static async Task UnpackZipAsync(string targetDirectory, bool overwrite, UniversalPackage package, bool preserveTimestamps)
         {
             Directory.CreateDirectory(targetDirectory);
 
-            var entries = zipFile.Entries.Where(e => e.FullName.StartsWith("package/", StringComparison.OrdinalIgnoreCase));
+            var entries = package.Entries.Where(e => e.IsContent);
 
             int files = 0;
             int directories = 0;
 
             foreach (var entry in entries)
             {
-                var targetPath = Path.Combine(targetDirectory, entry.FullName.Substring("package/".Length).Replace('/', Path.DirectorySeparatorChar));
+                var targetPath = Path.Combine(targetDirectory, entry.ContentPath);
 
-                if (entry.FullName.EndsWith("/"))
+                if (entry.IsDirectory)
                 {
                     Directory.CreateDirectory(targetPath);
                     directories++;
@@ -242,9 +258,9 @@ namespace Inedo.ProGet.UPack
                     }
 
                     // Assume files with timestamps set to 0 (DOS time) or close to 0 are not timestamped.
-                    if (preserveTimestamps && entry.LastWriteTime.Year > 1980)
+                    if (preserveTimestamps && entry.Timestamp.Year > 1980)
                     {
-                        File.SetLastWriteTimeUtc(targetPath, entry.LastWriteTime.DateTime);
+                        File.SetLastWriteTimeUtc(targetPath, entry.Timestamp.DateTime);
                     }
 
                     files++;
@@ -254,84 +270,94 @@ namespace Inedo.ProGet.UPack
             Console.WriteLine($"Extracted {files} files and {directories} directories.");
         }
 
-        internal static async Task CreateEntryFromFileAsync(ZipArchive zipFile, string fileName, string entryPath)
-        {
-            var entry = zipFile.CreateEntry(entryPath);
-
-            using (var input = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
-            using (var output = entry.Open())
-            {
-                await input.CopyToAsync(output);
-            }
-        }
-
-        internal static async Task CreateEntryFromStreamAsync(ZipArchive zipFile, Stream file, string entryPath)
-        {
-            var entry = zipFile.CreateEntry(entryPath);
-            
-            using (var output = entry.Open())
-            {
-                file.Position = 0;
-                await file.CopyToAsync(output);
-            }
-        }
-
-        internal static async Task AddDirectoryAsync(ZipArchive zipFile, string sourceDirectory, string entryRootPath)
-        {
-            bool hasContent = false;
-
-            foreach (var fileName in Directory.EnumerateFiles(sourceDirectory))
-            {
-                await CreateEntryFromFileAsync(zipFile, fileName, entryRootPath + Path.GetFileName(fileName));
-                hasContent = true;
-            }
-
-            foreach (var directoryName in Directory.EnumerateDirectories(sourceDirectory))
-            {
-                hasContent = true;
-                await AddDirectoryAsync(zipFile, directoryName, entryRootPath + Path.GetFileName(directoryName) + "/");
-            }
-
-            if (!hasContent)
-                zipFile.CreateEntry(entryRootPath);
-        }
-
-        internal static async Task<string> GetVersionAsync(string source, string group, string name, string version, NetworkCredential credentials, bool prerelease)
+        internal static async Task<UniversalPackageVersion> GetVersionAsync(UniversalFeedClient client, UniversalPackageId id, string version, bool prerelease)
         {
             if (!string.IsNullOrEmpty(version) && !string.Equals(version, "latest", StringComparison.OrdinalIgnoreCase) && !prerelease)
             {
-                return version;
+                var parsed = UniversalPackageVersion.TryParse(version);
+                if (parsed != null)
+                    return parsed;
+
+                throw new ApplicationException($"Invalid UPack version number: {version}");
             }
 
-            using (var client = CreateClient(credentials))
-            using (var response = await client.GetAsync($"{source.TrimEnd('/')}/packages?group={Uri.EscapeDataString(group ?? string.Empty)}&name={Uri.EscapeDataString(name)}"))
+            IReadOnlyList<RemoteUniversalPackageVersion> versions;
+            try
             {
-                response.EnsureSuccessStatusCode();
-
-                var serializer = new DataContractJsonSerializer(typeof(RemotePackageMetadata));
-                var metadata = (RemotePackageMetadata)serializer.ReadObject(await response.Content.ReadAsStreamAsync());
-                var versions = metadata.Versions.Select(UniversalPackageVersion.Parse);
-
-                if (!prerelease)
-                {
-                    versions = versions.Where(v => string.IsNullOrEmpty(v.Prerelease));
-                }
-
-                return versions.Max().ToString();
+                versions = await client.ListPackageVersionsAsync(id);
             }
+            catch (WebException ex)
+            {
+                throw ConvertWebException(ex);
+            }
+
+            if (!versions.Any())
+                throw new ApplicationException($"No versions of package {id} found.");
+
+            return versions.Max(v => v.Version);
         }
 
-        internal static HttpClient CreateClient(NetworkCredential credentials)
+        internal const string PackageNotFoundMessage = "The specified universal package was not found at the given URL";
+        internal const string FeedNotFoundMessage = "No UPack feed was found at the given URL";
+        internal const string IncorrectCredentialsMessage = "The server rejected the username or password given";
+
+        internal static ApplicationException ConvertWebException(WebException ex, string notFoundMessage = FeedNotFoundMessage)
         {
-            return new HttpClient(new HttpClientHandler
+            var message = ex.Message;
+            var statusCode = (ex.Response as HttpWebResponse)?.StatusCode;
+            if (ex.Status == WebExceptionStatus.ProtocolError && statusCode.HasValue)
             {
-                UseDefaultCredentials = credentials == null,
-                Credentials = credentials,
-                PreAuthenticate = true,
-            })
+                if (statusCode == HttpStatusCode.NotFound)
+                {
+                    message = notFoundMessage;
+                }
+                else if (statusCode == HttpStatusCode.Unauthorized)
+                {
+                    message = IncorrectCredentialsMessage;
+                }
+
+                if (ex.Response.ContentType == "text/plain")
+                {
+                    try
+                    {
+                        using (var reader = new StreamReader(ex.Response.GetResponseStream()))
+                        {
+                            var body = reader.ReadToEnd();
+                            if (!string.IsNullOrWhiteSpace(body))
+                            {
+                                message = message + ": " + body;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                }
+            }
+            return new ApplicationException(message, ex);
+        }
+
+        internal static UniversalFeedClient CreateClient(string source, NetworkCredential credentials)
+        {
+            try
             {
-                Timeout = Timeout.InfiniteTimeSpan
-            };
+                var uri = new Uri(source);
+
+                var endpoint = credentials == null ?
+                    new UniversalFeedEndpoint(uri, true) :
+                    new UniversalFeedEndpoint(uri, credentials.UserName, credentials.SecurePassword);
+
+                return new UniversalFeedClient(endpoint);
+            }
+            catch (UriFormatException ex)
+            {
+                throw new ApplicationException("Invalid UPack feed URL: " + ex.Message, ex);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ApplicationException("Invalid UPack feed URL: " + ex.Message, ex);
+            }
         }
     }
 }
