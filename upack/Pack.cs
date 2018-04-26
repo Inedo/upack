@@ -90,14 +90,10 @@ namespace Inedo.ProGet.UPack
                 }
             }
 
-            if (string.IsNullOrEmpty(info.Name))
+            var error = ValidateManifest(info);
+            if (error != null)
             {
-                Console.Error.WriteLine("Missing package name.");
-                return 2;
-            }
-            if (info.Version == null)
-            {
-                Console.Error.WriteLine("Missing package version.");
+                Console.Error.WriteLine("Invalid {0}: {1}", string.IsNullOrWhiteSpace(this.Manifest) ? "parameters" : "upack.json", error);
                 return 2;
             }
 

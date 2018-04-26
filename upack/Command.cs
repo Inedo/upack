@@ -220,12 +220,75 @@ namespace Inedo.ProGet.UPack
             return JsonConvert.DeserializeObject<UniversalPackageMetadata>(text);
         }
 
+        internal static string ValidateManifest(UniversalPackageMetadata info)
+        {
+            if (info.Group != null)
+            {
+                if (info.Group.Length > 250)
+                {
+                    return "group must be between 0 and 250 characters long.";
+                }
+
+                var invalid = info.Group.Where(c => (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && c != '-' && c != '.' && c != '/' && c != '_').Distinct().ToArray();
+                if (invalid.Length == 1)
+                {
+                    return "group contains invalid character: '" + invalid[0] + "'";
+                }
+                else if (invalid.Length > 1)
+                {
+                    return "group contains invalid characters: '" + string.Join("', '", invalid) + "'";
+                }
+
+                if (info.Group.StartsWith("/") || info.Group.EndsWith("/"))
+                {
+                    return "group must not start or end with a slash.";
+                }
+            }
+
+            {
+                if (string.IsNullOrEmpty(info.Name))
+                {
+                    return "missing name.";
+                }
+                if (info.Name.Length > 50)
+                {
+                    return "name must be between 1 and 50 characters long.";
+                }
+
+                var invalid = info.Name.Where(c => (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && c != '-' && c != '.' && c != '_').Distinct().ToArray();
+                if (invalid.Length == 1)
+                {
+                    return "name contains invalid character: '" + invalid[0] + "'";
+                }
+                else if (invalid.Length > 1)
+                {
+                    return "name contains invalid characters: '" + string.Join("', '", invalid) + "'";
+                }
+            }
+
+            if (info.Version == null)
+            {
+                return "missing or invalid version.";
+            }
+
+            if (info.Title != null && info.Title.Length > 50)
+            {
+                return "title must be between 0 and 50 characters long.";
+            }
+
+            return null;
+        }
+
         internal static void PrintManifest(UniversalPackageMetadata info)
         {
             if (!string.IsNullOrEmpty(info.Group))
-                Console.WriteLine($"Package: {info.Group}:{info.Name}");
+            {
+                Console.WriteLine($"Package: {info.Group}/{info.Name}");
+            }
             else
+            {
                 Console.WriteLine($"Package: {info.Name}");
+            }
 
             Console.WriteLine($"Version: {info.Version}");
         }

@@ -44,6 +44,13 @@ namespace Inedo.ProGet.UPack
                     throw new ApplicationException("The specified file is not a valid universal package: " + ex.Message, ex);
                 }
 
+                var error = ValidateManifest(info);
+                if (error != null)
+                {
+                    Console.Error.WriteLine("Invalid upack.json: {0}", error);
+                    return 2;
+                }
+
                 packageStream.Position = 0;
 
                 var client = CreateClient(this.Target, this.Authentication);

@@ -139,7 +139,14 @@ namespace Inedo.ProGet.UPack
             {
                 try
                 {
-                    Environment.ExitCode = cmd.RunAsync().GetAwaiter().GetResult();
+                    try
+                    {
+                        Environment.ExitCode = cmd.RunAsync().GetAwaiter().GetResult();
+                    }
+                    catch (AggregateException ex) when (ex.InnerException is ApplicationException)
+                    {
+                        throw ex.InnerException;
+                    }
                 }
                 catch (ApplicationException ex)
                 {
