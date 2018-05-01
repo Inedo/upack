@@ -66,6 +66,8 @@
     <Compile Include="Command.cs" />
     <Compile Include="CommandDispatcher.cs" />
     <Compile Include="Install.cs" />
+    <Compile Include="Hash.cs" />
+    <Compile Include="Verify.cs" />
     <Compile Include="List.cs" />
     <Compile Include="Repack.cs" />
     <Compile Include="Pack.cs" />

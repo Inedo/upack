@@ -1,11 +1,11 @@
-﻿using Inedo.UPack;
-using Inedo.UPack.Packaging;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Inedo.UPack;
+using Inedo.UPack.Packaging;
 
 namespace Inedo.ProGet.UPack
 {
@@ -17,6 +17,7 @@ namespace Inedo.ProGet.UPack
         [AlternateName("metadata")]
         [Description("Path of upack.json file to merge.")]
         [ExtraArgument]
+        [ExpandPath]
         public string Manifest { get; set; }
 
         [DisplayName("source")]
@@ -101,6 +102,8 @@ namespace Inedo.ProGet.UPack
 
                 foreach (var entry in entries)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     if (entry.IsDirectory)
                     {
                         builder.AddEmptyDirectoryRaw(entry.RawPath);

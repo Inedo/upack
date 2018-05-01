@@ -16,6 +16,7 @@ namespace Inedo.ProGet.UPack
         [AlternateName("metadata")]
         [Description("Path of a valid upack.json metadata file.")]
         [ExtraArgument]
+        [ExpandPath]
         public string Manifest { get; set; }
 
         [DisplayName("source")]

@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -438,6 +439,16 @@ namespace Inedo.ProGet.UPack
             catch (ArgumentException ex)
             {
                 throw new UpackException("Invalid UPack feed URL: " + ex.Message, ex);
+            }
+        }
+
+        internal static HexString GetSHA1(string filePath)
+        {
+            using (var file = File.OpenRead(filePath))
+            using (var hash = HashAlgorithm.Create("SHA1"))
+            {
+                var bytes = hash.ComputeHash(file);
+                return new HexString(bytes);
             }
         }
     }
