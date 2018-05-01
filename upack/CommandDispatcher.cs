@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
 {
     public sealed class CommandDispatcher
     {
-        public static CommandDispatcher Default => new CommandDispatcher(typeof(Pack), typeof(Push), typeof(Unpack), typeof(Install), typeof(List));
+        public static CommandDispatcher Default => new CommandDispatcher(typeof(Pack), typeof(Push), typeof(Unpack), typeof(Install), typeof(List), typeof(Repack));
 
         private readonly IEnumerable<Type> commands;
 
@@ -137,21 +139,35 @@ namespace Inedo.ProGet.UPack
             }
             else
             {
-                try
+                using (var consoleCancelTokenSource = new CancellationTokenSource())
                 {
+                    Console.CancelKeyPress +=
+                        (s, e) =>
+                        {
+                            consoleCancelTokenSource.Cancel();
+                        };
+
                     try
                     {
-                        Environment.ExitCode = cmd.RunAsync().GetAwaiter().GetResult();
+                        try
+                        {
+                            Environment.ExitCode = cmd.RunAsync(consoleCancelTokenSource.Token).GetAwaiter().GetResult();
+                        }
+                        catch (AggregateException ex) when (ex.InnerException is UpackException)
+                        {
+                            throw ex.InnerException;
+                        }
                     }
-                    catch (AggregateException ex) when (ex.InnerException is ApplicationException)
+                    catch (TaskCanceledException)
                     {
-                        throw ex.InnerException;
+                        Console.Error.WriteLine("Operation was canceled by the user.");
+                        Environment.ExitCode = 3;
                     }
-                }
-                catch (ApplicationException ex)
-                {
-                    Console.Error.WriteLine(ex.Message);
-                    Environment.ExitCode = 1;
+                    catch (UpackException ex)
+                    {
+                        Console.Error.WriteLine(ex.Message);
+                        Environment.ExitCode = 1;
+                    }
                 }
             }
         }

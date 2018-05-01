@@ -1,11 +1,12 @@
-﻿using Inedo.UPack;
-using Inedo.UPack.Packaging;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+using Inedo.UPack;
+using Inedo.UPack.Packaging;
 
 namespace Inedo.ProGet.UPack
 {
@@ -31,6 +32,7 @@ namespace Inedo.ProGet.UPack
         [DisplayName("target")]
         [Description("Directory where the contents of the package will be extracted.")]
         [ExtraArgument(Optional = true)]
+        [ExpandPath]
         public string TargetDirectory { get; set; }
 
         [DisplayName("user")]
@@ -79,7 +81,7 @@ namespace Inedo.ProGet.UPack
         [DefaultValue(false)]
         public bool PreserveTimestamps { get; set; } = false;
 
-        public override async Task<int> RunAsync()
+        public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
             var targetDirectory = this.TargetDirectory;
             if (String.IsNullOrEmpty(targetDirectory))
@@ -93,21 +95,21 @@ namespace Inedo.ProGet.UPack
             }
             catch (ArgumentException ex)
             {
-                throw new ApplicationException("Invalid package ID: " + ex.Message, ex);
+                throw new UpackException("Invalid package ID: " + ex.Message, ex);
             }
-            var version = await GetVersionAsync(client, id, this.Version, this.Prerelease);
+            var version = await GetVersionAsync(client, id, this.Version, this.Prerelease, cancellationToken);
             
             Stream stream = null;
             if (!this.Unregistered)
             {
                 using (var registry = PackageRegistry.GetRegistry(this.UserRegistry))
                 {
-                    await registry.LockAsync();
+                    await registry.LockAsync(cancellationToken);
                     try
                     {
                         if (this.CachePackages)
                         {
-                            stream = await registry.TryOpenFromCacheAsync(id, version);
+                            stream = await registry.TryOpenFromCacheAsync(id, version, cancellationToken);
                         }
 
                         await registry.RegisterPackageAsync(new RegisteredPackage
@@ -134,7 +136,7 @@ namespace Inedo.ProGet.UPack
             {
                 try
                 {
-                    stream = await client.GetPackageStreamAsync(id, version);
+                    stream = await client.GetPackageStreamAsync(id, version, cancellationToken);
                 }
                 catch (WebException ex)
                 {
@@ -144,7 +146,7 @@ namespace Inedo.ProGet.UPack
 
             using (var package = new UniversalPackage(stream))
             {
-                await UnpackZipAsync(this.TargetDirectory, this.Overwrite, package, this.PreserveTimestamps);
+                await UnpackZipAsync(this.TargetDirectory, this.Overwrite, package, this.PreserveTimestamps, cancellationToken);
             }
 
             return 0;

@@ -1,6 +1,7 @@
 ﻿using Inedo.UPack.Packaging;
 using System;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -17,10 +18,11 @@ namespace Inedo.ProGet.UPack
         [DisplayName("target")]
         [Description("Directory where the contents of the package will be extracted.")]
         [PositionalArgument(1)]
+        [ExpandPath]
         public string Target { get; set; }
 
         [DisplayName("overwrite")]
-        [Description("When specified, Overwrite files in the target directory.")]
+        [Description("When specified, overwrite files in the target directory.")]
         [ExtraArgument]
         [DefaultValue(false)]
         public bool Overwrite { get; set; } = false;
@@ -31,7 +33,7 @@ namespace Inedo.ProGet.UPack
         [DefaultValue(false)]
         public bool PreserveTimestamps { get; set; } = false;
 
-        public override async Task<int> RunAsync()
+        public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
             UniversalPackage package;
             try
@@ -40,7 +42,7 @@ namespace Inedo.ProGet.UPack
             }
             catch (Exception ex)
             {
-                throw new ApplicationException("The specified file is not a valid universal package: " + ex.Message, ex);
+                throw new UpackException("The specified file is not a valid universal package: " + ex.Message, ex);
             }
 
             using (package)
@@ -48,7 +50,7 @@ namespace Inedo.ProGet.UPack
                 var info = package.GetFullMetadata();
                 PrintManifest(info);
 
-                await UnpackZipAsync(this.Target, this.Overwrite, package, this.PreserveTimestamps);
+                await UnpackZipAsync(this.Target, this.Overwrite, package, this.PreserveTimestamps, cancellationToken);
             }
 
             return 0;

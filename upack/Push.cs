@@ -3,6 +3,7 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -14,6 +15,7 @@ namespace Inedo.ProGet.UPack
         [DisplayName("package")]
         [Description("Path of a valid .upack file.")]
         [PositionalArgument(0)]
+        [ExpandPath]
         public string Package { get; set; }
 
         [DisplayName("target")]
@@ -26,7 +28,7 @@ namespace Inedo.ProGet.UPack
         [ExtraArgument]
         public NetworkCredential Authentication { get; set; }
 
-        public override async Task<int> RunAsync()
+        public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
             using (var packageStream = new FileStream(this.Package, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous))
             {
@@ -41,7 +43,7 @@ namespace Inedo.ProGet.UPack
                 }
                 catch (Exception ex)
                 {
-                    throw new ApplicationException("The specified file is not a valid universal package: " + ex.Message, ex);
+                    throw new UpackException("The specified file is not a valid universal package: " + ex.Message, ex);
                 }
 
                 var error = ValidateManifest(info);
@@ -59,7 +61,7 @@ namespace Inedo.ProGet.UPack
 
                 try
                 {
-                    await client.UploadPackageAsync(packageStream);
+                    await client.UploadPackageAsync(packageStream, cancellationToken);
                 }
                 catch (WebException ex)
                 {

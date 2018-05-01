@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Inedo.ProGet.UPack
@@ -32,6 +33,11 @@ namespace Inedo.ProGet.UPack
         public sealed class ExtraArgumentAttribute : Attribute
         {
             public bool Optional { get; set; } = true;
+        }
+
+        [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+        public sealed class ExpandPathAttribute : Attribute
+        {
         }
 
         [AttributeUsage(AttributeTargets.Property, AllowMultiple = true, Inherited = true)]
@@ -58,6 +64,7 @@ namespace Inedo.ProGet.UPack
             public string DisplayName => p.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? p.Name;
             public string Description => p.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty;
             public object DefaultValue => p.GetCustomAttribute<DefaultValueAttribute>()?.Value;
+            public bool ExpandPath => p.GetCustomAttribute<ExpandPathAttribute>() != null;
 
             public abstract string GetUsage();
 
@@ -87,7 +94,15 @@ namespace Inedo.ProGet.UPack
 
                 if (p.PropertyType == typeof(string))
                 {
-                    p.SetValue(cmd, value);
+                    if (this.ExpandPath)
+                    {
+                        string path = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, value ?? string.Empty));
+                        p.SetValue(cmd, path);
+                    }
+                    else
+                    {
+                        p.SetValue(cmd, value);
+                    }
                     return true;
                 }
 
@@ -170,7 +185,7 @@ namespace Inedo.ProGet.UPack
             .Select(p => new PositionalArgument(p))
             .OrderBy(a => a.Index);
 
-        public abstract Task<int> RunAsync();
+        public abstract Task<int> RunAsync(CancellationToken cancellationToken);
 
         public IEnumerable<ExtraArgument> ExtraArguments => this.GetType().GetRuntimeProperties()
             .Where(p => p.GetCustomAttribute<ExtraArgumentAttribute>() != null)
@@ -216,8 +231,11 @@ namespace Inedo.ProGet.UPack
 
         internal static async Task<UniversalPackageMetadata> ReadManifestAsync(Stream metadataStream)
         {
-            var text = await new StreamReader(metadataStream).ReadToEndAsync();
-            return JsonConvert.DeserializeObject<UniversalPackageMetadata>(text);
+            using (var reader = new StreamReader(metadataStream))
+            {
+                var text = await reader.ReadToEndAsync();
+                return JsonConvert.DeserializeObject<UniversalPackageMetadata>(text);
+            }
         }
 
         internal static string ValidateManifest(UniversalPackageMetadata info)
@@ -293,7 +311,7 @@ namespace Inedo.ProGet.UPack
             Console.WriteLine($"Version: {info.Version}");
         }
 
-        internal static async Task UnpackZipAsync(string targetDirectory, bool overwrite, UniversalPackage package, bool preserveTimestamps)
+        internal static async Task UnpackZipAsync(string targetDirectory, bool overwrite, UniversalPackage package, bool preserveTimestamps, CancellationToken cancellationToken)
         {
             Directory.CreateDirectory(targetDirectory);
 
@@ -317,7 +335,7 @@ namespace Inedo.ProGet.UPack
                     using (var entryStream = entry.Open())
                     using (var targetStream = new FileStream(targetPath, overwrite ? FileMode.Create : FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous))
                     {
-                        await entryStream.CopyToAsync(targetStream);
+                        await entryStream.CopyToAsync(targetStream, 65536, cancellationToken);
                     }
 
                     // Assume files with timestamps set to 0 (DOS time) or close to 0 are not timestamped.
@@ -333,7 +351,7 @@ namespace Inedo.ProGet.UPack
             Console.WriteLine($"Extracted {files} files and {directories} directories.");
         }
 
-        internal static async Task<UniversalPackageVersion> GetVersionAsync(UniversalFeedClient client, UniversalPackageId id, string version, bool prerelease)
+        internal static async Task<UniversalPackageVersion> GetVersionAsync(UniversalFeedClient client, UniversalPackageId id, string version, bool prerelease, CancellationToken cancellationToken)
         {
             if (!string.IsNullOrEmpty(version) && !string.Equals(version, "latest", StringComparison.OrdinalIgnoreCase) && !prerelease)
             {
@@ -341,13 +359,13 @@ namespace Inedo.ProGet.UPack
                 if (parsed != null)
                     return parsed;
 
-                throw new ApplicationException($"Invalid UPack version number: {version}");
+                throw new UpackException($"Invalid UPack version number: {version}");
             }
 
             IReadOnlyList<RemoteUniversalPackageVersion> versions;
             try
             {
-                versions = await client.ListPackageVersionsAsync(id);
+                versions = await client.ListPackageVersionsAsync(id, false, null, cancellationToken);
             }
             catch (WebException ex)
             {
@@ -355,7 +373,7 @@ namespace Inedo.ProGet.UPack
             }
 
             if (!versions.Any())
-                throw new ApplicationException($"No versions of package {id} found.");
+                throw new UpackException($"No versions of package {id} found.");
 
             return versions.Max(v => v.Version);
         }
@@ -364,7 +382,7 @@ namespace Inedo.ProGet.UPack
         internal const string FeedNotFoundMessage = "No UPack feed was found at the given URL";
         internal const string IncorrectCredentialsMessage = "The server rejected the username or password given";
 
-        internal static ApplicationException ConvertWebException(WebException ex, string notFoundMessage = FeedNotFoundMessage)
+        internal static UpackException ConvertWebException(WebException ex, string notFoundMessage = FeedNotFoundMessage)
         {
             var message = ex.Message;
             var statusCode = (ex.Response as HttpWebResponse)?.StatusCode;
@@ -398,7 +416,7 @@ namespace Inedo.ProGet.UPack
                     }
                 }
             }
-            return new ApplicationException(message, ex);
+            return new UpackException(message, ex);
         }
 
         internal static UniversalFeedClient CreateClient(string source, NetworkCredential credentials)
@@ -415,11 +433,11 @@ namespace Inedo.ProGet.UPack
             }
             catch (UriFormatException ex)
             {
-                throw new ApplicationException("Invalid UPack feed URL: " + ex.Message, ex);
+                throw new UpackException("Invalid UPack feed URL: " + ex.Message, ex);
             }
             catch (ArgumentException ex)
             {
-                throw new ApplicationException("Invalid UPack feed URL: " + ex.Message, ex);
+                throw new UpackException("Invalid UPack feed URL: " + ex.Message, ex);
             }
         }
     }

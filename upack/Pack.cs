@@ -1,9 +1,10 @@
-﻿using Inedo.UPack;
-using Inedo.UPack.Packaging;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using Inedo.UPack;
+using Inedo.UPack.Packaging;
 
 namespace Inedo.ProGet.UPack
 {
@@ -20,11 +21,13 @@ namespace Inedo.ProGet.UPack
         [DisplayName("source")]
         [Description("Directory containing files to add to the package.")]
         [PositionalArgument(0)]
+        [ExpandPath]
         public string SourceDirectory { get; set; }
 
         [DisplayName("targetDirectory")]
         [Description("Directory where the .upack file will be created. If not specified, the current working directory is used.")]
         [ExtraArgument]
+        [ExpandPath]
         public string TargetDirectory { get; set; }
 
         [DisplayName("group")]
@@ -57,11 +60,8 @@ namespace Inedo.ProGet.UPack
         [ExtraArgument]
         public string IconUrl { get; set; }
 
-
-        public override async Task<int> RunAsync()
+        public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
-            this.TargetDirectory = this.TargetDirectory ?? Environment.CurrentDirectory;
-
             UniversalPackageMetadata info;
 
             if (string.IsNullOrWhiteSpace(this.Manifest))
@@ -80,7 +80,7 @@ namespace Inedo.ProGet.UPack
             {
                 if (!File.Exists(this.Manifest))
                 {
-                    Console.Error.WriteLine($"The manifest file '{Manifest}' does not exist.");
+                    Console.Error.WriteLine($"The manifest file '{this.Manifest}' does not exist.");
                     return 2;
                 }
 
@@ -99,17 +99,35 @@ namespace Inedo.ProGet.UPack
 
             PrintManifest(info);
 
-            if (!Directory.Exists(SourceDirectory))
+            if (!Directory.Exists(this.SourceDirectory))
             {
-                Console.Error.WriteLine($"The source directory '{SourceDirectory}' does not exist.");
+                Console.Error.WriteLine($"The source directory '{this.SourceDirectory}' does not exist.");
                 return 2;
             }
 
-            var fileName = Path.Combine(this.TargetDirectory, $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack");
-            using (var builder = new UniversalPackageBuilder(fileName, info))
+            string relativePackageFileName = $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack";
+            string targetFileName = Path.Combine(this.TargetDirectory ?? Environment.CurrentDirectory, relativePackageFileName);
+
+            if (File.Exists(Path.Combine(this.SourceDirectory, relativePackageFileName)))
             {
-                await builder.AddContentsAsync(this.SourceDirectory, "package/", true);
+                Console.Error.WriteLine("Warning: output file already exists in source directory and may be included inadvertently in the package contents.");
             }
+
+            string tmpPath = Path.GetTempFileName();
+            using (var builder = new UniversalPackageBuilder(tmpPath, info))
+            {
+                await builder.AddContentsAsync(
+                    this.SourceDirectory, 
+                    "/", 
+                    true, 
+                    s => string.IsNullOrWhiteSpace(this.Manifest) || !string.Equals(s, "upack.json", StringComparison.OrdinalIgnoreCase), 
+                    cancellationToken
+                );
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(targetFileName));
+            File.Delete(targetFileName);
+            File.Move(tmpPath, targetFileName);
 
             return 0;
         }

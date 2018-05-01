@@ -1,8 +1,9 @@
-﻿using Inedo.UPack.Packaging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
+using Inedo.UPack.Packaging;
 
 namespace Inedo.ProGet.UPack
 {
@@ -16,12 +17,12 @@ namespace Inedo.ProGet.UPack
         [DefaultValue(false)]
         public bool UserRegistry { get; set; } = false;
 
-        public override async Task<int> RunAsync()
+        public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
             IReadOnlyList<RegisteredPackage> packages;
             using (var registry = PackageRegistry.GetRegistry(this.UserRegistry))
             {
-                await registry.LockAsync();
+                await registry.LockAsync(cancellationToken);
                 try
                 {
                     packages = await registry.GetInstalledPackagesAsync();
