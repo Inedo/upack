@@ -2,19 +2,24 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
     <id>upack</id>
-    <title>upack</title>
+    <title>upack command line client</title>
     <version>0.0.0</version>
     <authors>Inedo</authors>
     <owners>Inedo</owners>
     <summary>Command-line client for ProGet Universal feeds.</summary>
     <description>upack is a simple CLI tool for building, installing, and publishing universal packages to ProGet feeds.</description>
-    <projectUrl>http://inedo.com/support/documentation/proget/reference/universal-feed-api-and-package-format</projectUrl>
+    <projectUrl>https://inedo.com/upack</projectUrl>
     <tags>proget upack universal</tags>
     <copyright>Inedo 2017</copyright>
-    <licenseUrl>http://inedo.com/proget/license-agreement#upack</licenseUrl>
+    <licenseUrl>https://github.com/Inedo/upack/blob/master/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <dependencies></dependencies>
-    <releaseNotes></releaseNotes>
+    <releaseNotes>https://github.com/Inedo/upack/releases</releaseNotes>
+    <docsUrl>https://inedo.com/support/documentation/various/universal-packages/upack-reference</docsUrl>
+    <packageSourceUrl>https://github.com/Inedo/upack</packageSourceUrl>
+    <bugTrackerUrl>https://github.com/Inedo/upack/issues</bugTrackerUrl>
+    <mailingListUrl>https://inedo.com/support/questions</mailingListUrl>
+    <iconUrl>https://inedo.com/company/media/downloads/upack-icon.png</iconUrl>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
