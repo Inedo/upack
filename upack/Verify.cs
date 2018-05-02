@@ -31,7 +31,7 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
-            var metadata = GetPackageMetadata();
+            var metadata = GetPackageMetadata(this.PackagePath);
             var packageId = new UniversalPackageId(metadata.Group, metadata.Name);
             var client = CreateClient(this.SourceEndpoint, this.Authentication);
             var remoteVersion = await client.GetPackageVersionAsync(packageId, metadata.Version, false, cancellationToken);
@@ -47,21 +47,6 @@ namespace Inedo.ProGet.UPack
             Console.WriteLine("Hashes for local and remote package match: " + sha1);
 
             return 0;
-        }
-
-        private UniversalPackageMetadata GetPackageMetadata()
-        {
-            try
-            {
-                using (var package = new UniversalPackage(this.PackagePath))
-                {
-                    return package.GetFullMetadata().Clone();
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new UpackException($"The source package file '{this.PackagePath}' does not exist or could not be opened.", ex);
-            }
         }
     }
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"archive/zip"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +13,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Command interface {
@@ -36,6 +40,7 @@ type PositionalArgument struct {
 
 type ExtraArgument struct {
 	Name        string
+	Alias       []string
 	Required    bool
 	Description string
 	Flag        bool
@@ -78,6 +83,23 @@ func trySetStringValue(name string, f func(Command) *string) func(Command, *stri
 		}
 
 		*f(cmd) = *value
+		return true
+	}
+}
+
+func trySetPathValue(name string, f func(Command) *string) func(Command, *string) bool {
+	return func(cmd Command, value *string) bool {
+		if value == nil {
+			return false
+		}
+
+		p, err := filepath.Abs(*value)
+		if err != nil {
+			fmt.Println("--"+name, "must be a valid path.")
+			return false
+		}
+
+		*f(cmd) = p
 		return true
 	}
 }
@@ -163,8 +185,8 @@ func defaultCommandHelp(cmd Command) string {
 	return string(s)
 }
 
-func ReadManifest(r io.Reader) (*PackageMetadata, error) {
-	var meta PackageMetadata
+func ReadManifest(r io.Reader) (*UniversalPackageMetadata, error) {
+	var meta UniversalPackageMetadata
 	err := json.NewDecoder(r).Decode(&meta)
 	if err != nil {
 		return nil, err
@@ -172,7 +194,7 @@ func ReadManifest(r io.Reader) (*PackageMetadata, error) {
 	return &meta, nil
 }
 
-func PrintManifest(info *PackageMetadata) {
+func PrintManifest(info *UniversalPackageMetadata) {
 	fmt.Println("Package:", info.groupAndName())
 	fmt.Println("Version:", info.Version)
 }
@@ -393,4 +415,123 @@ func GetVersion(source, group, name, version string, credentials *[2]string, pre
 		}
 	}
 	return latestVersion.String(), nil
+}
+
+func GetSHA1(filePath string) (h string, err error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return
+	}
+	defer func() {
+		if e := f.Close(); err == nil {
+			err = e
+		}
+	}()
+
+	hash := sha1.New()
+	_, err = io.Copy(hash, f)
+	if err != nil {
+		return
+	}
+
+	h = hex.EncodeToString(hash.Sum(nil))
+	return
+}
+
+func GetPackageMetadata(packagePath string) (metadata *UniversalPackageMetadata, err error) {
+	pkg, err := zip.OpenReader(packagePath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "The source package '%s' does not exist or could not be opened.", packagePath)
+	}
+	defer func() {
+		if e := pkg.Close(); err == nil {
+			err = errors.Wrapf(e, "The source package '%s' does not exist or could not be opened.", packagePath)
+		}
+	}()
+
+	for _, entry := range pkg.File {
+		if entry.Name == "upack.json" {
+			var r io.ReadCloser
+			r, err = entry.Open()
+			if err != nil {
+				return nil, errors.Wrapf(err, "The source package '%s' does not exist or could not be opened.", packagePath)
+			}
+			defer func() {
+				if e := r.Close(); err == nil {
+					err = errors.Wrapf(e, "The source package '%s' does not exist or could not be opened.", packagePath)
+				}
+			}()
+
+			metadata, err = ReadManifest(r)
+			if err != nil {
+				err = errors.Wrapf(err, "The source package '%s' does not exist or could not be opened.", packagePath)
+			}
+			return
+		}
+	}
+	return nil, errors.Errorf("The source package '%s' does not exist or could not be opened.", packagePath)
+}
+
+func findChars(s string, f func(rune) bool) []string {
+	var chars []string
+	seen := make(map[rune]bool)
+
+	for _, r := range s {
+		if f(r) && !seen[r] {
+			chars = append(chars, string(r))
+			seen[r] = true
+		}
+	}
+
+	return chars
+}
+
+func ValidateManifest(info *UniversalPackageMetadata) error {
+	if info.Group != "" {
+		if len(info.Group) > 250 {
+			return errors.New("group must be between 0 and 250 characters long.")
+		}
+
+		invalid := findChars(info.Group, func(c rune) bool {
+			return (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && c != '-' && c != '.' && c != '/' && c != '_'
+		})
+		if len(invalid) == 1 {
+			return errors.New("group contains invalid character: '" + invalid[0] + "'")
+		} else if len(invalid) > 1 {
+			return errors.New("group contains invalid characters: '" + strings.Join(invalid, "', '") + "'")
+		}
+
+		if strings.HasPrefix(info.Group, "/") || strings.HasSuffix(info.Group, "/") {
+			return errors.New("group must not start or end with a slash.")
+		}
+	}
+
+	{
+		if info.Name == "" {
+			return errors.New("missing name.")
+		}
+		if len(info.Name) > 50 {
+			return errors.New("name must be between 1 and 50 characters long.")
+		}
+
+		invalid := findChars(info.Name, func(c rune) bool {
+			return (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && c != '-' && c != '.' && c != '_'
+		})
+		if len(invalid) == 1 {
+			return errors.New("name contains invalid character: '" + invalid[0] + "'")
+		} else if len(invalid) > 1 {
+			return errors.New("name contains invalid characters: '" + strings.Join(invalid, "', '") + "'")
+		}
+	}
+
+	_, err := ParseUniversalPackageVersion(info.Version)
+	if err != nil {
+		return errors.New("missing or invalid version.")
+	}
+
+	if len(info.Title) > 50 {
+		return errors.New("title must be between 0 and 50 characters long.")
+	}
+
+	return nil
 }

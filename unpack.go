@@ -35,7 +35,7 @@ func (*Unpack) PositionalArguments() []PositionalArgument {
 			Name:        "target",
 			Description: "Directory where the contents of the package will be extracted.",
 			Index:       1,
-			TrySetValue: trySetStringValue("target", func(cmd Command) *string {
+			TrySetValue: trySetPathValue("target", func(cmd Command) *string {
 				return &cmd.(*Unpack).Target
 			}),
 		},
@@ -45,7 +45,7 @@ func (*Unpack) ExtraArguments() []ExtraArgument {
 	return []ExtraArgument{
 		{
 			Name:        "overwrite",
-			Description: "When specified, Overwrite files in the target directory.",
+			Description: "When specified, overwrite files in the target directory.",
 			Flag:        true,
 			TrySetValue: trySetBoolValue("overwrite", func(cmd Command) *bool {
 				return &cmd.(*Unpack).Overwrite
@@ -98,7 +98,7 @@ func (u *Unpack) Run() int {
 	return 0
 }
 
-func (u *Unpack) ReadManifest(entry *zip.File) (*PackageMetadata, error) {
+func (u *Unpack) ReadManifest(entry *zip.File) (*UniversalPackageMetadata, error) {
 	r, err := entry.Open()
 	if err != nil {
 		return nil, err

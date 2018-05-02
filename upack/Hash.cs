@@ -19,29 +19,11 @@ namespace Inedo.ProGet.UPack
 
         public override Task<int> RunAsync(CancellationToken cancellationToken)
         {
-            var metadata = GetPackageMetadata();
-            var packageId = new UniversalPackageId(metadata.Group, metadata.Name);
-
             var sha1 = GetSHA1(this.PackagePath);
 
             Console.WriteLine(sha1);
 
             return Task.FromResult(0);
-        }
-
-        private UniversalPackageMetadata GetPackageMetadata()
-        {
-            try
-            {
-                using (var package = new UniversalPackage(this.PackagePath))
-                {
-                    return package.GetFullMetadata().Clone();
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new UpackException($"The source package file '{this.PackagePath}' does not exist or could not be opened.", ex);
-            }
         }
     }
 }

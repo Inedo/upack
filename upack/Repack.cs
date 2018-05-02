@@ -70,7 +70,7 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
-            var info = CloneExistingPackageMetadata();
+            var info = GetPackageMetadata(this.SourcePath);
             var infoToMerge = await GetMetadataToMergeAsync();
 
             foreach (var modifiedProperty in infoToMerge)
@@ -152,21 +152,6 @@ namespace Inedo.ProGet.UPack
                 {
                     throw new UpackException($"The manifest file '{this.Manifest}' does not exist or could not be opened.", ex);
                 }
-            }
-        }
-
-        private UniversalPackageMetadata CloneExistingPackageMetadata()
-        {
-            try
-            {
-                using (var package = new UniversalPackage(this.SourcePath))
-                {
-                    return package.GetFullMetadata().Clone();
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new UpackException($"The source package file '{this.SourcePath}' does not exist or could not be opened.", ex);
             }
         }
     }

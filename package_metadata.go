@@ -1,6 +1,6 @@
 package main
 
-type PackageMetadata struct {
+type UniversalPackageMetadata struct {
 	Group        string   `json:"group,omitempty"`
 	Name         string   `json:"name"`
 	Version      string   `json:"version"`
@@ -10,7 +10,7 @@ type PackageMetadata struct {
 	Dependencies []string `json:"dependencies,omitempty"`
 }
 
-func (meta PackageMetadata) BareVersion() string {
+func (meta UniversalPackageMetadata) BareVersion() string {
 	v, err := ParseUniversalPackageVersion(meta.Version)
 
 	if err == nil {
@@ -22,7 +22,7 @@ func (meta PackageMetadata) BareVersion() string {
 	return meta.Version
 }
 
-func (meta PackageMetadata) groupAndName() string {
+func (meta UniversalPackageMetadata) groupAndName() string {
 	if meta.Group != "" {
 		return meta.Group + "/" + meta.Name
 	}

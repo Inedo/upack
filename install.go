@@ -68,7 +68,7 @@ func (*Install) ExtraArguments() []ExtraArgument {
 			Name:        "target",
 			Description: "Directory where the contents of the package will be extracted.",
 			Required:    true,
-			TrySetValue: trySetStringValue("target", func(cmd Command) *string {
+			TrySetValue: trySetPathValue("target", func(cmd Command) *string {
 				return &cmd.(*Install).TargetDirectory
 			}),
 		},

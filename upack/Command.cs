@@ -451,5 +451,20 @@ namespace Inedo.ProGet.UPack
                 return new HexString(bytes);
             }
         }
+
+        internal static UniversalPackageMetadata GetPackageMetadata(string zipFileName)
+        {
+            try
+            {
+                using (var package = new UniversalPackage(zipFileName))
+                {
+                    return package.GetFullMetadata().Clone();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new UpackException($"The source package file '{zipFileName}' does not exist or could not be opened.", ex);
+            }
+        }
     }
 }

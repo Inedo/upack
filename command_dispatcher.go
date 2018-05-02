@@ -12,6 +12,9 @@ var commands = CommandDispatcher{
 	&Unpack{},
 	&Install{},
 	&List{},
+	&Repack{},
+	&Verify{},
+	&Hash{},
 }
 
 type CommandDispatcher []Command
@@ -85,8 +88,21 @@ func (cd CommandDispatcher) Main(args []string) {
 						hadError = true
 					}
 					delete(extra, strings.ToLower(arg.Name))
-				} else if arg.Required {
-					hadError = true
+				} else {
+					any := false
+					for _, a := range arg.Alias {
+						if s, ok := extra[strings.ToLower(a)]; ok {
+							if !arg.TrySetValue(cmd, s) {
+								hadError = true
+							}
+							delete(extra, strings.ToLower(a))
+							any = true
+							break
+						}
+					}
+					if !any && arg.Required {
+						hadError = true
+					}
 				}
 			}
 

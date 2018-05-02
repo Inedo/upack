@@ -61,7 +61,7 @@ func (p *Push) Run() int {
 	}
 	defer packageStream.Close()
 
-	var info *PackageMetadata
+	var info *UniversalPackageMetadata
 
 	fi, err := packageStream.Stat()
 	if err != nil {
@@ -95,6 +95,12 @@ func (p *Push) Run() int {
 	if info == nil {
 		fmt.Fprintln(os.Stderr, "upack.json missing from upack file!")
 		return 1
+	}
+
+	err = ValidateManifest(info)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Invalid upack.json:", err)
+		return 2
 	}
 
 	PrintManifest(info)

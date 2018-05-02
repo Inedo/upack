@@ -5,13 +5,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Pack struct {
 	Manifest        string
-	Metadata        PackageMetadata
+	Metadata        UniversalPackageMetadata
 	SourceDirectory string
 	TargetDirectory string
 }
@@ -30,7 +32,7 @@ func (*Pack) PositionalArguments() []PositionalArgument {
 			Name:        "source",
 			Description: "Directory containing files to add to the package.",
 			Index:       0,
-			TrySetValue: trySetStringValue("source", func(cmd Command) *string {
+			TrySetValue: trySetPathValue("source", func(cmd Command) *string {
 				return &cmd.(*Pack).SourceDirectory
 			}),
 		},
@@ -39,16 +41,17 @@ func (*Pack) PositionalArguments() []PositionalArgument {
 func (*Pack) ExtraArguments() []ExtraArgument {
 	return []ExtraArgument{
 		{
-			Name:        "metadata",
+			Name:        "manifest",
+			Alias:       []string{"metadata"},
 			Description: "Path of a valid upack.json metadata file.",
-			TrySetValue: trySetStringValue("manifest", func(cmd Command) *string {
+			TrySetValue: trySetPathValue("manifest", func(cmd Command) *string {
 				return &cmd.(*Pack).Manifest
 			}),
 		},
 		{
 			Name:        "targetDirectory",
 			Description: "Directory where the .upack file will be created. If not specified, the current working directory is used.",
-			TrySetValue: trySetStringValue("targetDirectory", func(cmd Command) *string {
+			TrySetValue: trySetPathValue("targetDirectory", func(cmd Command) *string {
 				return &cmd.(*Pack).TargetDirectory
 			}),
 		},
@@ -111,26 +114,51 @@ func (p *Pack) Run() int {
 			return 1
 		}
 	}
-	if info.Name == "" {
-		fmt.Fprintln(os.Stderr, "Missing package name.")
-		return 2
-	}
-	if info.Version == "" {
-		fmt.Fprintln(os.Stderr, "Missing package version.")
+
+	err := ValidateManifest(info)
+	if err != nil {
+		thing := "upack.json:"
+		if strings.TrimSpace(p.Manifest) == "" {
+			thing = "parameters:"
+		}
+		fmt.Fprintln(os.Stderr, "Invalid", thing, err)
 		return 2
 	}
 
 	PrintManifest(info)
 
-	fileName := filepath.Join(p.TargetDirectory, info.Name+"-"+info.BareVersion()+".upack")
-	zipStream, err := os.Create(fileName)
+	fi, err := os.Stat(p.SourceDirectory)
+	if os.IsNotExist(err) || (err == nil && !fi.IsDir()) {
+		fmt.Fprintf(os.Stderr, "The source directory '%s' does not exist.\n", p.SourceDirectory)
+		return 2
+	} else if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+
+	_, err = os.Stat(filepath.Join(p.SourceDirectory, info.Name+"-"+info.BareVersion()+".upack"))
+	if err == nil {
+		fmt.Fprintln(os.Stderr, "Warning: output file already exists in source directory and may be included inadvertently in the package contents.")
+	} else if !os.IsNotExist(err) {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+
+	targetFileName := filepath.Join(p.TargetDirectory, info.Name+"-"+info.BareVersion()+".upack")
+	tmpFile, err := ioutil.TempFile("", "upack")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	defer zipStream.Close()
+	tmpPath := tmpFile.Name()
+	defer func() {
+		if tmpFile != nil {
+			_ = tmpFile.Close()
+			_ = os.Remove(tmpPath)
+		}
+	}()
 
-	zipFile := zip.NewWriter(zipStream)
+	zipFile := zip.NewWriter(tmpFile)
 
 	if p.Manifest != "" {
 		err = CreateEntryFromFile(zipFile, p.Manifest, "upack.json")
@@ -165,10 +193,32 @@ func (p *Pack) Run() int {
 		return 1
 	}
 
+	err = os.MkdirAll(filepath.Dir(targetFileName), 0755)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	err = os.Remove(targetFileName)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	err = tmpFile.Close()
+	tmpFile = nil
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	err = os.Rename(targetFileName, tmpPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+
 	return 0
 }
 
-func (p *Pack) ReadManifest() (*PackageMetadata, error) {
+func (p *Pack) ReadManifest() (*UniversalPackageMetadata, error) {
 	f, err := os.Open(p.Manifest)
 	if err != nil {
 		return nil, err
