@@ -7,23 +7,22 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 )
 
 type Repack struct {
-	Manifest           string
-	SourcePath         string
-	TargetDirectory    string
-	Group              string
-	PackageName        string
-	Version            string
-	Title              string
-	PackageDescription string
-	IconUrl            string
-	Overwrite          bool
+	Manifest        string
+	SourcePath      string
+	TargetDirectory string
+	Metadata        UniversalPackageMetadata
+	Note            string
+	NoAudit         bool
+	Overwrite       bool
 }
 
 func (*Repack) Name() string { return "repack" }
@@ -67,43 +66,58 @@ func (*Repack) ExtraArguments() []ExtraArgument {
 		{
 			Name:        "group",
 			Description: "Package group. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("group", func(cmd Command) *string {
-				return &cmd.(*Repack).Group
+			TrySetValue: trySetStringFnValue("group", func(cmd Command) func(string) {
+				return (&cmd.(*Repack).Metadata).SetGroup
 			}),
 		},
 		{
 			Name:        "name",
 			Description: "Package name. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("name", func(cmd Command) *string {
-				return &cmd.(*Repack).PackageName
+			TrySetValue: trySetStringFnValue("name", func(cmd Command) func(string) {
+				return (&cmd.(*Repack).Metadata).SetName
 			}),
 		},
 		{
 			Name:        "version",
 			Description: "Package version. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("version", func(cmd Command) *string {
-				return &cmd.(*Repack).Version
+			TrySetValue: trySetStringFnValue("version", func(cmd Command) func(string) {
+				return (&cmd.(*Repack).Metadata).SetVersion
 			}),
 		},
 		{
 			Name:        "title",
 			Description: "Package title. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("title", func(cmd Command) *string {
-				return &cmd.(*Repack).Title
+			TrySetValue: trySetStringFnValue("title", func(cmd Command) func(string) {
+				return (&cmd.(*Repack).Metadata).SetTitle
 			}),
 		},
 		{
 			Name:        "description",
 			Description: "Package description. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("description", func(cmd Command) *string {
-				return &cmd.(*Repack).PackageDescription
+			TrySetValue: trySetStringFnValue("description", func(cmd Command) func(string) {
+				return (&cmd.(*Repack).Metadata).SetDescription
 			}),
 		},
 		{
 			Name:        "icon",
 			Description: "Icon absolute Url. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("icon", func(cmd Command) *string {
-				return &cmd.(*Repack).IconUrl
+			TrySetValue: trySetStringFnValue("icon", func(cmd Command) func(string) {
+				return (&cmd.(*Repack).Metadata).SetIconURL
+			}),
+		},
+		{
+			Name:        "note",
+			Description: "A description of the purpose for creating this upack file.",
+			TrySetValue: trySetStringValue("note", func(cmd Command) *string {
+				return &cmd.(*Repack).Note
+			}),
+		},
+		{
+			Name:        "no-audit",
+			Description: "Do not store audit information in the UPack manifest.",
+			Flag:        true,
+			TrySetValue: trySetBoolValue("no-audit", func(cmd Command) *bool {
+				return &cmd.(*Repack).NoAudit
 			}),
 		},
 		{
@@ -118,6 +132,11 @@ func (*Repack) ExtraArguments() []ExtraArgument {
 }
 
 func (r *Repack) Run() int {
+	if r.NoAudit && r.Note != "" {
+		fmt.Fprintln(os.Stderr, "--no-audit cannot be used with --note.")
+		return 2
+	}
+
 	info, err := GetPackageMetadata(r.SourcePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -128,20 +147,27 @@ func (r *Repack) Run() int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
+	hash, err := GetSHA1(r.SourcePath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
 
-	prop := func(dest *string, src string) {
+	id := info.groupAndName() + ":" + info.Version() + ":" + hash
+
+	prop := func(dest func(string), src string) {
 		if src != "" {
-			*dest = src
+			dest(src)
 		}
 	}
-	prop(&info.Group, infoToMerge.Group)
-	prop(&info.Name, infoToMerge.Name)
-	prop(&info.Version, infoToMerge.Version)
-	prop(&info.Title, infoToMerge.Title)
-	prop(&info.Description, infoToMerge.Description)
-	prop(&info.IconURL, infoToMerge.IconURL)
-	if len(infoToMerge.Dependencies) != 0 {
-		info.Dependencies = infoToMerge.Dependencies
+	prop(info.SetGroup, infoToMerge.Group())
+	prop(info.SetName, infoToMerge.Name())
+	prop(info.SetVersion, infoToMerge.Version())
+	prop(info.SetTitle, infoToMerge.Title())
+	prop(info.SetDescription, infoToMerge.Description())
+	prop(info.SetIconURL, infoToMerge.IconURL())
+	if len(infoToMerge.Dependencies()) != 0 {
+		info.SetDependencies(infoToMerge.Dependencies())
 	}
 	err = ValidateManifest(info)
 	if err != nil {
@@ -155,7 +181,34 @@ func (r *Repack) Run() int {
 
 	PrintManifest(info)
 
-	relativePackageFileName := info.Name + "-" + info.BareVersion() + ".upack"
+	if !r.NoAudit {
+		var history []interface{}
+		if h, ok := (*info)["repackageHistory"]; ok {
+			history = h.([]interface{})
+		} else {
+			history = make([]interface{}, 0, 1)
+		}
+
+		entry := map[string]interface{}{
+			"id":    id,
+			"date":  time.Now().UTC().Format(time.RFC3339),
+			"using": "upack/" + Version,
+		}
+
+		currentUser, err := user.Current()
+		if err == nil {
+			entry["by"] = currentUser.Name
+		}
+
+		if r.Note != "" {
+			entry["reason"] = r.Note
+		}
+
+		history = append(history, entry)
+		(*info)["repackageHistory"] = history
+	}
+
+	relativePackageFileName := info.Name() + "-" + info.BareVersion() + ".upack"
 	targetFileName, err := filepath.Abs(filepath.Join(r.TargetDirectory, relativePackageFileName))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -264,14 +317,7 @@ func (r *Repack) Run() int {
 
 func (r *Repack) GetMetadataToMerge() (metadata *UniversalPackageMetadata, err error) {
 	if strings.TrimSpace(r.Manifest) != "" {
-		return &UniversalPackageMetadata{
-			Group:       r.Group,
-			Name:        r.PackageName,
-			Version:     r.Version,
-			Title:       r.Title,
-			Description: r.PackageDescription,
-			IconURL:     r.IconUrl,
-		}, nil
+		return &r.Metadata, nil
 	}
 	metadataStream, err := os.Open(r.Manifest)
 	if err != nil {

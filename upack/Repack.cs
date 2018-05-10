@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -62,6 +64,16 @@ namespace Inedo.ProGet.UPack
         [ExtraArgument]
         public string IconUrl { get; set; }
 
+        [DisplayName("no-audit")]
+        [Description("Do not store audit information in the UPack manifest.")]
+        [ExtraArgument]
+        public bool NoAudit { get; set; }
+
+        [DisplayName("note")]
+        [Description("A description of the purpose for creating this upack file.")]
+        [ExtraArgument]
+        public string Note { get; set; }
+
         [DisplayName("overwrite")]
         [Description("Overwrite existing package file if it already exists.")]
         [ExtraArgument]
@@ -70,8 +82,17 @@ namespace Inedo.ProGet.UPack
 
         public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
+            if (this.NoAudit && !string.IsNullOrEmpty(this.Note))
+            {
+                Console.Error.WriteLine("--no-audit cannot be used with --note.");
+                return 2;
+            }
+
             var info = GetPackageMetadata(this.SourcePath);
             var infoToMerge = await GetMetadataToMergeAsync();
+            var hash = GetSHA1(this.SourcePath);
+
+            var id = (string.IsNullOrEmpty(info.Group) ? "" : info.Group + "/") + info.Name + ":" + info.Version + ":" + hash;
 
             foreach (var modifiedProperty in infoToMerge)
                 info[modifiedProperty.Key] = modifiedProperty.Value;
@@ -84,6 +105,35 @@ namespace Inedo.ProGet.UPack
             }
 
             PrintManifest(info);
+
+            if (!this.NoAudit)
+            {
+                IList history;
+                if (info.ContainsKey("repackageHistory"))
+                {
+                    history = (IList)info["repackageHistory"];
+                }
+                else
+                {
+                    history = new List<object>();
+                    info["repackageHistory"] = history;
+                }
+
+                var entry = new Dictionary<string, object>
+                {
+                    { "id", id },
+                    { "date", DateTime.UtcNow.ToString("u") },
+                    { "using", "upack/" + typeof(Repack).Assembly.GetName().Version.ToString(3) },
+                    { "by", Environment.UserName }
+                };
+
+                if (!string.IsNullOrEmpty(this.Note))
+                {
+                    entry["reason"] = this.Note;
+                }
+
+                history.Add(entry);
+            }
 
             string relativePackageFileName = $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack";
             string targetFileName = Path.Combine(this.TargetDirectory ?? Environment.CurrentDirectory, relativePackageFileName);

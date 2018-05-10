@@ -33,18 +33,18 @@ type Command interface {
 type PositionalArgument struct {
 	Index       int
 	Name        string
-	Optional    bool
 	Description string
 	TrySetValue func(Command, *string) bool
+	Optional    bool
 }
 
 type ExtraArgument struct {
 	Name        string
 	Alias       []string
-	Required    bool
 	Description string
-	Flag        bool
 	TrySetValue func(Command, *string) bool
+	Required    bool
+	Flag        bool
 }
 
 func (a PositionalArgument) Help() string {
@@ -83,6 +83,17 @@ func trySetStringValue(name string, f func(Command) *string) func(Command, *stri
 		}
 
 		*f(cmd) = *value
+		return true
+	}
+}
+
+func trySetStringFnValue(name string, f func(Command) func(string)) func(Command, *string) bool {
+	return func(cmd Command, value *string) bool {
+		if value == nil {
+			return false
+		}
+
+		f(cmd)(*value)
 		return true
 	}
 }
@@ -196,7 +207,7 @@ func ReadManifest(r io.Reader) (*UniversalPackageMetadata, error) {
 
 func PrintManifest(info *UniversalPackageMetadata) {
 	fmt.Println("Package:", info.groupAndName())
-	fmt.Println("Version:", info.Version)
+	fmt.Println("Version:", info.Version())
 }
 
 func UnpackZip(targetDirectory string, overwrite bool, zipFile *zip.Reader, preserveTimestamps bool) error {
@@ -281,8 +292,8 @@ func saveEntryToFile(entry *zip.File, targetPath string, overwrite, preserveTime
 		return
 	}
 
-	if preserveTimestamps && entry.ModTime().Year() > 1980 {
-		err = os.Chtimes(targetPath, entry.ModTime(), entry.ModTime())
+	if preserveTimestamps && entry.Modified.Year() > 1980 {
+		err = os.Chtimes(targetPath, entry.Modified, entry.Modified)
 		if err != nil {
 			return
 		}
@@ -401,6 +412,14 @@ func GetVersion(source, group, name, version string, credentials *[2]string, pre
 		return "", err
 	}
 
+	if len(data.Versions) == 0 {
+		groupAndName := name
+		if group != "" {
+			groupAndName = group + "/" + name
+		}
+		return "", fmt.Errorf("No versions of package %s found.", groupAndName)
+	}
+
 	var latestVersion *UniversalPackageVersion
 	for _, v := range data.Versions {
 		version, err := ParseUniversalPackageVersion(v)
@@ -487,12 +506,12 @@ func findChars(s string, f func(rune) bool) []string {
 }
 
 func ValidateManifest(info *UniversalPackageMetadata) error {
-	if info.Group != "" {
-		if len(info.Group) > 250 {
+	if info.Group() != "" {
+		if len(info.Group()) > 250 {
 			return errors.New("group must be between 0 and 250 characters long.")
 		}
 
-		invalid := findChars(info.Group, func(c rune) bool {
+		invalid := findChars(info.Group(), func(c rune) bool {
 			return (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && c != '-' && c != '.' && c != '/' && c != '_'
 		})
 		if len(invalid) == 1 {
@@ -501,20 +520,20 @@ func ValidateManifest(info *UniversalPackageMetadata) error {
 			return errors.New("group contains invalid characters: '" + strings.Join(invalid, "', '") + "'")
 		}
 
-		if strings.HasPrefix(info.Group, "/") || strings.HasSuffix(info.Group, "/") {
+		if strings.HasPrefix(info.Group(), "/") || strings.HasSuffix(info.Group(), "/") {
 			return errors.New("group must not start or end with a slash.")
 		}
 	}
 
 	{
-		if info.Name == "" {
+		if info.Name() == "" {
 			return errors.New("missing name.")
 		}
-		if len(info.Name) > 50 {
+		if len(info.Name()) > 50 {
 			return errors.New("name must be between 1 and 50 characters long.")
 		}
 
-		invalid := findChars(info.Name, func(c rune) bool {
+		invalid := findChars(info.Name(), func(c rune) bool {
 			return (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && c != '-' && c != '.' && c != '_'
 		})
 		if len(invalid) == 1 {
@@ -524,12 +543,12 @@ func ValidateManifest(info *UniversalPackageMetadata) error {
 		}
 	}
 
-	_, err := ParseUniversalPackageVersion(info.Version)
+	_, err := ParseUniversalPackageVersion(info.Version())
 	if err != nil {
 		return errors.New("missing or invalid version.")
 	}
 
-	if len(info.Title) > 50 {
+	if len(info.Title()) > 50 {
 		return errors.New("title must be between 0 and 50 characters long.")
 	}
 

@@ -61,8 +61,24 @@ namespace Inedo.ProGet.UPack
         [ExtraArgument]
         public string IconUrl { get; set; }
 
+        [DisplayName("no-audit")]
+        [Description("Do not store audit information in the UPack manifest.")]
+        [ExtraArgument]
+        public bool NoAudit { get; set; }
+
+        [DisplayName("note")]
+        [Description("A description of the purpose for creating this upack file.")]
+        [ExtraArgument]
+        public string Note { get; set; }
+
         public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
+            if (this.NoAudit && !string.IsNullOrEmpty(this.Note))
+            {
+                Console.Error.WriteLine("--no-audit cannot be used with --note.");
+                return 2;
+            }
+
             UniversalPackageMetadata info;
 
             if (string.IsNullOrWhiteSpace(this.Manifest))
@@ -99,6 +115,17 @@ namespace Inedo.ProGet.UPack
             }
 
             PrintManifest(info);
+
+            if (!this.NoAudit)
+            {
+                info["createdDate"] = DateTime.UtcNow.ToString("u");
+                if (!string.IsNullOrEmpty(this.Note))
+                {
+                    info["createdReason"] = this.Note;
+                }
+                info["createdUsing"] = "upack/" + typeof(Pack).Assembly.GetName().Version.ToString(3);
+                info["createdBy"] = Environment.UserName;
+            }
 
             if (!Directory.Exists(this.SourceDirectory))
             {

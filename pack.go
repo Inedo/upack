@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Pack struct {
@@ -16,6 +18,8 @@ type Pack struct {
 	Metadata        UniversalPackageMetadata
 	SourceDirectory string
 	TargetDirectory string
+	Note            string
+	NoAudit         bool
 }
 
 func (*Pack) Name() string { return "pack" }
@@ -58,49 +62,69 @@ func (*Pack) ExtraArguments() []ExtraArgument {
 		{
 			Name:        "group",
 			Description: "Package group. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("group", func(cmd Command) *string {
-				return &cmd.(*Pack).Metadata.Group
+			TrySetValue: trySetStringFnValue("group", func(cmd Command) func(string) {
+				return (&cmd.(*Pack).Metadata).SetGroup
 			}),
 		},
 		{
 			Name:        "name",
 			Description: "Package name. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("name", func(cmd Command) *string {
-				return &cmd.(*Pack).Metadata.Name
+			TrySetValue: trySetStringFnValue("name", func(cmd Command) func(string) {
+				return (&cmd.(*Pack).Metadata).SetName
 			}),
 		},
 		{
 			Name:        "version",
 			Description: "Package version. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("version", func(cmd Command) *string {
-				return &cmd.(*Pack).Metadata.Version
+			TrySetValue: trySetStringFnValue("version", func(cmd Command) func(string) {
+				return (&cmd.(*Pack).Metadata).SetVersion
 			}),
 		},
 		{
 			Name:        "title",
 			Description: "Package title. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("title", func(cmd Command) *string {
-				return &cmd.(*Pack).Metadata.Title
+			TrySetValue: trySetStringFnValue("title", func(cmd Command) func(string) {
+				return (&cmd.(*Pack).Metadata).SetTitle
 			}),
 		},
 		{
 			Name:        "description",
 			Description: "Package description. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("description", func(cmd Command) *string {
-				return &cmd.(*Pack).Metadata.Description
+			TrySetValue: trySetStringFnValue("description", func(cmd Command) func(string) {
+				return (&cmd.(*Pack).Metadata).SetDescription
 			}),
 		},
 		{
 			Name:        "icon",
 			Description: "Icon absolute URL. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringValue("icon", func(cmd Command) *string {
-				return &cmd.(*Pack).Metadata.IconURL
+			TrySetValue: trySetStringFnValue("icon", func(cmd Command) func(string) {
+				return (&cmd.(*Pack).Metadata).SetIconURL
+			}),
+		},
+		{
+			Name:        "note",
+			Description: "A description of the purpose for creating this upack file.",
+			TrySetValue: trySetStringValue("note", func(cmd Command) *string {
+				return &cmd.(*Pack).Note
+			}),
+		},
+		{
+			Name:        "no-audit",
+			Description: "Do not store audit information in the UPack manifest.",
+			Flag:        true,
+			TrySetValue: trySetBoolValue("no-audit", func(cmd Command) *bool {
+				return &cmd.(*Pack).NoAudit
 			}),
 		},
 	}
 }
 
 func (p *Pack) Run() int {
+	if p.NoAudit && p.Note != "" {
+		fmt.Fprintln(os.Stderr, "--no-audit cannot be used with --note.")
+		return 2
+	}
+
 	if p.TargetDirectory == "" {
 		p.TargetDirectory = "."
 	}
@@ -127,6 +151,18 @@ func (p *Pack) Run() int {
 
 	PrintManifest(info)
 
+	if !p.NoAudit {
+		(*info)["createdDate"] = time.Now().UTC().Format(time.RFC3339)
+		if p.Note != "" {
+			(*info)["createdReason"] = p.Note
+		}
+		(*info)["createdUsing"] = "upack/" + Version
+		currentUser, err := user.Current()
+		if err == nil {
+			(*info)["createdBy"] = currentUser.Name
+		}
+	}
+
 	fi, err := os.Stat(p.SourceDirectory)
 	if os.IsNotExist(err) || (err == nil && !fi.IsDir()) {
 		fmt.Fprintf(os.Stderr, "The source directory '%s' does not exist.\n", p.SourceDirectory)
@@ -136,7 +172,7 @@ func (p *Pack) Run() int {
 		return 1
 	}
 
-	_, err = os.Stat(filepath.Join(p.SourceDirectory, info.Name+"-"+info.BareVersion()+".upack"))
+	_, err = os.Stat(filepath.Join(p.SourceDirectory, info.Name()+"-"+info.BareVersion()+".upack"))
 	if err == nil {
 		fmt.Fprintln(os.Stderr, "Warning: output file already exists in source directory and may be included inadvertently in the package contents.")
 	} else if !os.IsNotExist(err) {
@@ -144,7 +180,7 @@ func (p *Pack) Run() int {
 		return 1
 	}
 
-	targetFileName := filepath.Join(p.TargetDirectory, info.Name+"-"+info.BareVersion()+".upack")
+	targetFileName := filepath.Join(p.TargetDirectory, info.Name()+"-"+info.BareVersion()+".upack")
 	tmpFile, err := ioutil.TempFile("", "upack")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

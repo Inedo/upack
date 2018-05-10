@@ -62,7 +62,7 @@ func (v *Verify) Run() int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	req, err := http.NewRequest("GET", strings.TrimRight(v.SourceEndpoint, "/")+"/versions?"+(url.Values{"group": {metadata.Group}, "name": {metadata.Name}, "version": {metadata.Version}}).Encode(), nil)
+	req, err := http.NewRequest("GET", strings.TrimRight(v.SourceEndpoint, "/")+"/versions?"+(url.Values{"group": {metadata.Group()}, "name": {metadata.Name()}, "version": {metadata.Version()}}).Encode(), nil)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
