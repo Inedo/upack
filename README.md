@@ -1,6 +1,6 @@
 # upack.exe
 
-upack.exe *(or upack.go)* is a command-line tool used to create and install universal packages; you can also see which packages are installed on a machine.
+upack.exe is a command-line tool used to create and install universal packages; you can also see which packages are installed on a machine.
 
 ## Installation
 
@@ -8,7 +8,7 @@ The upack command-line tool does not require any installation; you can download 
 
 ## Command Line Reference
 
-    upack «command»
+    upack Â«commandÂ»
 
 Where command is one of the following:
 
@@ -16,7 +16,7 @@ Where command is one of the following:
 
 Creates a new ProGet universal package using specified metadata and source directory.
     
-    upack pack «source» [--metadata=«metadata»] [--targetDirectory=«targetDirectory»] [--group=«group»] [--name=«name»] [--version=«version»] [--title=«title»] [--description=«description»] [--icon=«icon»]
+    upack pack Â«sourceÂ» [--metadata=Â«metadataÂ»] [--targetDirectory=Â«targetDirectoryÂ»] [--group=Â«groupÂ»] [--name=Â«nameÂ»] [--version=Â«versionÂ»] [--title=Â«titleÂ»] [--description=Â«descriptionÂ»] [--icon=Â«iconÂ»]
 
  - **`source`** - Directory containing files to add to the package.
  - `metadata` - Path of a valid upack.json metadata file.
@@ -32,7 +32,7 @@ Creates a new ProGet universal package using specified metadata and source direc
 
 Pushes a ProGet universal package to the specified ProGet feed.
 
-    upack push «package» «target» [--user=«authentication»]
+    upack push Â«packageÂ» Â«targetÂ» [--user=Â«authenticationÂ»]
 
  - **`package`** - Path of a valid .upack file.
  - **`target`** - URL of a upack API endpoint.
@@ -42,7 +42,7 @@ Pushes a ProGet universal package to the specified ProGet feed.
 
 Extracts the contents of a ProGet universal package to a directory.
 
-    upack unpack «package» «target» [--overwrite]
+    upack unpack Â«packageÂ» Â«targetÂ» [--overwrite]
 
  - **`package`** - Path of a valid .upack file.
  - **`target`** - Directory where the contents of the package will be extracted.
@@ -53,7 +53,7 @@ Extracts the contents of a ProGet universal package to a directory.
 
 Downloads the specified ProGet universal package and extracts its contents to a directory.
 
-    upack install «package» [«version»] --source=«source» --target=«target» [--user=«user»] [--comment=«comment»] [--overwrite] [--prerelease] [--userregistry] [--unregistered] [--cache]
+    upack install Â«packageÂ» [Â«versionÂ»] --source=Â«sourceÂ» --target=Â«targetÂ» [--user=Â«userÂ»] [--comment=Â«commentÂ»] [--overwrite] [--prerelease] [--userregistry] [--unregistered] [--cache]
 
  - **`package`** - Package name and group, such as group/name.
  - `version` - Package version. If not specified, the latest version is retrieved.
@@ -79,7 +79,7 @@ Lists packages installed in the local registry.
 
 Creates a new ProGet universal package from an existing package with optionally modified metadata.
 
-    upack repack «source» [--manifest=«manifest»] [--targetDirectory=«targetDirectory»] [--group=«group»] [--name=«name»] [--version=«version»] [--title=«title»] [--description=«description»] [--icon=«icon»] [--overwrite]
+    upack repack Â«sourceÂ» [--manifest=Â«manifestÂ»] [--targetDirectory=Â«targetDirectoryÂ»] [--group=Â«groupÂ»] [--name=Â«nameÂ»] [--version=Â«versionÂ»] [--title=Â«titleÂ»] [--description=Â«descriptionÂ»] [--icon=Â«iconÂ»] [--overwrite]
 
  - **`source`** - The path of the existing upack file.
  - `manifest` - Path of upack.json file to merge.
@@ -97,7 +97,7 @@ Creates a new ProGet universal package from an existing package with optionally 
 
 Verifies that a specified package hash matches the hash stored in a ProGet Universal feed.
 
-    upack verify «package» «source» [--user=«user»]
+    upack verify Â«packageÂ» Â«sourceÂ» [--user=Â«userÂ»]
 
  - **`package`** - Path of a valid .upack file.
  - **`source`** - URL of a upack API endpoint.
@@ -107,6 +107,6 @@ Verifies that a specified package hash matches the hash stored in a ProGet Unive
 
 Calculates the SHA1 hash of a local package and writes it to standard output.
 
-    upack hash «package»
+    upack hash Â«packageÂ»
 
  - **`package`** - Path of a valid .upack file.
