@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Inedo.UPack;
 using Inedo.UPack.Packaging;
+using Newtonsoft.Json.Linq;
 
 namespace Inedo.ProGet.UPack
 {
@@ -109,14 +110,14 @@ namespace Inedo.ProGet.UPack
 
             if (!this.NoAudit)
             {
-                IList history;
+                JArray history;
                 if (info.ContainsKey("repackageHistory"))
                 {
-                    history = (IList)info["repackageHistory"];
+                    history = (JArray)info["repackageHistory"];
                 }
                 else
                 {
-                    history = new List<object>();
+                    history = new JArray();
                     info["repackageHistory"] = history;
                 }
 
@@ -133,7 +134,7 @@ namespace Inedo.ProGet.UPack
                     entry["reason"] = this.Note;
                 }
 
-                history.Add(entry);
+                history.Add(JObject.FromObject(entry));
             }
 
             string relativePackageFileName = $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack";
