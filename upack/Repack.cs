@@ -67,6 +67,7 @@ namespace Inedo.ProGet.UPack
         [DisplayName("no-audit")]
         [Description("Do not store audit information in the UPack manifest.")]
         [ExtraArgument]
+        [DefaultValue(false)]
         public bool NoAudit { get; set; }
 
         [DisplayName("note")]
