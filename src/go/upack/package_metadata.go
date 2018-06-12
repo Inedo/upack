@@ -1,4 +1,4 @@
-package main
+package upack
 
 type UniversalPackageMetadata map[string]interface{}
 

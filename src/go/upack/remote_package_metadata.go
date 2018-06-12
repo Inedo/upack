@@ -1,4 +1,4 @@
-package main
+package upack
 
 type RemotePackageMetadata struct {
 	Group         string   `json:"group,omitempty"`
