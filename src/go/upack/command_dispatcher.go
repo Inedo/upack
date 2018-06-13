@@ -15,6 +15,7 @@ var commands = CommandDispatcher{
 	&Repack{},
 	&Verify{},
 	&Hash{},
+	&Metadata{},
 }
 
 type CommandDispatcher []Command

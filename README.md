@@ -110,3 +110,15 @@ Calculates the SHA1 hash of a local package and writes it to standard output.
     upack hash «package»
 
  - **`package`** - Path of a valid .upack file.
+
+### metadata
+
+Displays metadata for a remote ProGet universal package.
+
+    upack metadata «package» [«version»] --source=«source» [--user=«authentication»] [--file=«file»]
+
+ - **`package`** - Package name and group, such as group/name.
+ - `version` - Package version. If not specified, the latest version is retrieved.
+ - **`source`** - URL of a upack API endpoint.
+ - `user` - User name and password to use for servers that require authentication. Example: username:password
+ - `file` - The metadata file to display relative to the .upack root; the default is upack.json.
