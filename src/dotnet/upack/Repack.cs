@@ -13,12 +13,12 @@ using Newtonsoft.Json.Linq;
 namespace Inedo.ProGet.UPack
 {
     [DisplayName("repack")]
-    [Description("Creates a new ProGet universal package from an existing package with optionally modified metadata.")]
+    [Description("Creates a new ProGet universal package by repackaging an existing package with a new version number and audit information.")]
     public sealed class Repack : Command
     {
-        [DisplayName("manifest")]
+        [Obsolete]
+        [AlternateName("manifest")]
         [AlternateName("metadata")]
-        [Description("Path of upack.json file to merge.")]
         [ExtraArgument]
         [ExpandPath]
         public string Manifest { get; set; }
@@ -35,44 +35,45 @@ namespace Inedo.ProGet.UPack
         [ExpandPath]
         public string TargetDirectory { get; set; }
 
-        [DisplayName("group")]
-        [Description("Package group. If metadata file is provided, value will be ignored.")]
+        [Obsolete]
+        [AlternateName("group")]
         [ExtraArgument]
         public string Group { get; set; }
 
-        [DisplayName("name")]
-        [Description("Package name. If metadata file is provided, value will be ignored.")]
+        [Obsolete]
+        [AlternateName("name")]
         [ExtraArgument]
         public string Name { get; set; }
 
-        [DisplayName("version")]
-        [Description("Package version. If metadata file is provided, value will be ignored.")]
+        [DisplayName("newVersion")]
+        [AlternateName("version")]
+        [Description("New package version to use.")]
         [ExtraArgument]
-        public string Version { get; set; }
+        public string NewVersion { get; set; }
 
-        [DisplayName("title")]
-        [Description("Package title. If metadata file is provided, value will be ignored.")]
+        [Obsolete]
+        [AlternateName("title")]
         [ExtraArgument]
         public string Title { get; set; }
 
-        [DisplayName("description")]
-        [Description("Package description. If metadata file is provided, value will be ignored.")]
+        [Obsolete]
+        [AlternateName("description")]
         [ExtraArgument]
         public string PackageDescription { get; set; }
 
-        [DisplayName("icon")]
-        [Description("Icon absolute Url. If metadata file is provided, value will be ignored.")]
+        [Obsolete]
+        [AlternateName("icon")]
         [ExtraArgument]
         public string IconUrl { get; set; }
 
-        [DisplayName("no-audit")]
-        [Description("Do not store audit information in the UPack manifest.")]
+        [Obsolete]
+        [AlternateName("no-audit")]
         [ExtraArgument]
         [DefaultValue(false)]
         public bool NoAudit { get; set; }
 
         [DisplayName("note")]
-        [Description("A description of the purpose for creating this upack file.")]
+        [Description("A description of the purpose for repackaging that will be entered as the audit note.")]
         [ExtraArgument]
         public string Note { get; set; }
 
@@ -82,6 +83,7 @@ namespace Inedo.ProGet.UPack
         [DefaultValue(false)]
         public bool Overwrite { get; set; }
 
+#pragma warning disable CS0612 // Type or member is obsolete
         public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
             if (this.NoAudit && !string.IsNullOrEmpty(this.Note))
@@ -185,7 +187,7 @@ namespace Inedo.ProGet.UPack
                 {
                     Group = this.Group,
                     Name = this.Name,
-                    Version = UniversalPackageVersion.TryParse(this.Version),
+                    Version = UniversalPackageVersion.TryParse(this.NewVersion),
                     Title = this.Title,
                     Description = this.PackageDescription,
                     Icon = this.IconUrl
@@ -206,5 +208,6 @@ namespace Inedo.ProGet.UPack
                 }
             }
         }
+#pragma warning restore CS0612 // Type or member is obsolete
     }
 }

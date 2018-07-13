@@ -61,6 +61,7 @@ namespace Inedo.ProGet.UPack
                 this.p = p;
             }
 
+            public bool IsDeprecated => p.GetCustomAttribute<ObsoleteAttribute>() != null;
             public abstract bool Optional { get; }
             public string DisplayName => p.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? p.Name;
             public string Description => p.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty;
@@ -200,12 +201,14 @@ namespace Inedo.ProGet.UPack
 
             foreach (var arg in this.PositionalArguments)
             {
-                s.Append(' ').Append(arg.GetUsage());
+                if (!arg.IsDeprecated)
+                    s.Append(' ').Append(arg.GetUsage());
             }
 
             foreach (var arg in this.ExtraArguments)
             {
-                s.Append(' ').Append(arg.GetUsage());
+                if (!arg.IsDeprecated)
+                    s.Append(' ').Append(arg.GetUsage());
             }
 
             return s.ToString();
@@ -219,12 +222,14 @@ namespace Inedo.ProGet.UPack
 
             foreach (var arg in this.PositionalArguments)
             {
-                s.AppendLine().Append(arg.GetHelp());
+                if (!arg.IsDeprecated)
+                    s.AppendLine().Append(arg.GetHelp());
             }
 
             foreach (var arg in this.ExtraArguments)
             {
-                s.AppendLine().Append(arg.GetHelp());
+                if (!arg.IsDeprecated)
+                    s.AppendLine().Append(arg.GetHelp());
             }
 
             return s.ToString();
