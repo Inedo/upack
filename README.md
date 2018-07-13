@@ -48,7 +48,6 @@ Extracts the contents of a ProGet universal package to a directory.
  - **`target`** - Directory where the contents of the package will be extracted.
  - `overwrite` - When specified, overwrite files in the target directory.
 
-
 ### install
 
 Downloads the specified ProGet universal package and extracts its contents to a directory.
@@ -74,7 +73,6 @@ Lists packages installed in the local registry.
     upack list [--userregistry]
 
  - `userregistry` - List packages in the user registry instead of the machine registry.
-
 
 ### repack
 
