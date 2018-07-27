@@ -15,13 +15,9 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <dependencies></dependencies>
     <releaseNotes>https://github.com/Inedo/upack/releases</releaseNotes>
-    <docsUrl>https://inedo.com/support/documentation/various/universal-packages/upack-reference</docsUrl>
-    <packageSourceUrl>https://github.com/Inedo/upack</packageSourceUrl>
-    <bugTrackerUrl>https://github.com/Inedo/upack/issues</bugTrackerUrl>
-    <mailingListUrl>https://inedo.com/support/questions</mailingListUrl>
     <iconUrl>https://inedo.com/company/media/downloads/upack-icon.png</iconUrl>
   </metadata>
   <files>
-    <file src="tools\**" target="tools" />
+    <file src="upack\bin\release\**" target="tools" />
   </files>
 </package>
