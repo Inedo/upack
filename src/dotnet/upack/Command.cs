@@ -285,7 +285,7 @@ namespace Inedo.ProGet.UPack
                 }
             }
 
-            if (info.Version == null)
+            if (UniversalPackageVersion.TryParse(info["version"] as string ?? string.Empty) == null)
             {
                 return "missing or invalid version.";
             }
