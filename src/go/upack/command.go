@@ -163,13 +163,17 @@ func defaultCommandUsage(cmd Command) string {
 	s = append(s, cmd.Name()...)
 
 	for _, arg := range cmd.PositionalArguments() {
-		s = append(s, ' ')
-		s = append(s, arg.Usage()...)
+		if arg.Name != "" {
+			s = append(s, ' ')
+			s = append(s, arg.Usage()...)
+		}
 	}
 
 	for _, arg := range cmd.ExtraArguments() {
-		s = append(s, ' ')
-		s = append(s, arg.Usage()...)
+		if arg.Name != "" {
+			s = append(s, ' ')
+			s = append(s, arg.Usage()...)
+		}
 	}
 
 	return string(s)
@@ -184,13 +188,17 @@ func defaultCommandHelp(cmd Command) string {
 	s = append(s, '\n')
 
 	for _, arg := range cmd.PositionalArguments() {
-		s = append(s, '\n')
-		s = append(s, arg.Help()...)
+		if arg.Name != "" {
+			s = append(s, '\n')
+			s = append(s, arg.Help()...)
+		}
 	}
 
 	for _, arg := range cmd.ExtraArguments() {
-		s = append(s, '\n')
-		s = append(s, arg.Help()...)
+		if arg.Name != "" {
+			s = append(s, '\n')
+			s = append(s, arg.Help()...)
+		}
 	}
 
 	return string(s)

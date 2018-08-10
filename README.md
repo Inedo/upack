@@ -48,7 +48,6 @@ Extracts the contents of a ProGet universal package to a directory.
  - **`target`** - Directory where the contents of the package will be extracted.
  - `overwrite` - When specified, overwrite files in the target directory.
 
-
 ### install
 
 Downloads the specified ProGet universal package and extracts its contents to a directory.
@@ -77,21 +76,15 @@ Lists packages installed in the local registry.
 
 ### repack
 
-Creates a new ProGet universal package from an existing package with optionally modified metadata.
+Creates a new ProGet universal package by repackaging an existing package with a new version number and audit information.
 
-    upack repack «source» [--manifest=«manifest»] [--targetDirectory=«targetDirectory»] [--group=«group»] [--name=«name»] [--version=«version»] [--title=«title»] [--description=«description»] [--icon=«icon»] [--overwrite]
+    upack repack «source» [--newVersion=«newVersion»] [--targetDirectory=«targetDirectory»] [--note=«auditNote»] [--overwrite] 
 
  - **`source`** - The path of the existing upack file.
- - `manifest` - Path of upack.json file to merge.
- - `targetDirectory` - Directory where the .upack file will be created. If not specified, the current working directory is used.
- - `group` - Package group. If metadata file is provided, value will be ignored.
- - `name` - Package name. If metadata file is provided, value will be ignored.
- - `version` - Package version. If metadata file is provided, value will be ignored.
- - `title` - Package title. If metadata file is provided, value will be ignored.
- - `description` - Package description. If metadata file is provided, value will be ignored.
- - `icon` - Icon absolute Url. If metadata file is provided, value will be ignored.
+ - `newVersion` - New package version to use.
+ - `targetDirectory` - Directory where the .upack file will be created. If not specified, the current working directory is used. 
+ - `note` - A description of the purpose for repackaging that will be entered as the audit note.
  - `overwrite` - Overwrite existing package file if it already exists.
-
 
 ### verify
 

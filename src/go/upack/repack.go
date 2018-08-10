@@ -27,7 +27,7 @@ type Repack struct {
 
 func (*Repack) Name() string { return "repack" }
 func (*Repack) Description() string {
-	return "Creates a new ProGet universal package from an existing package with optionally modified metadata."
+	return "Creates a new ProGet universal package by repackaging an existing package with a new version number and audit information."
 }
 
 func (r *Repack) Help() string  { return defaultCommandHelp(r) }
@@ -49,8 +49,7 @@ func (*Repack) PositionalArguments() []PositionalArgument {
 func (*Repack) ExtraArguments() []ExtraArgument {
 	return []ExtraArgument{
 		{
-			Name:        "manifest",
-			Alias:       []string{"metadata"},
+			Alias:       []string{"manifest", "metadata"},
 			Description: "Path of upack.json file to merge.",
 			TrySetValue: trySetPathValue("manifest", func(cmd Command) *string {
 				return &cmd.(*Repack).Manifest
@@ -64,58 +63,53 @@ func (*Repack) ExtraArguments() []ExtraArgument {
 			}),
 		},
 		{
-			Name:        "group",
-			Description: "Package group. If metadata file is provided, value will be ignored.",
+			Alias: []string{"group"},
 			TrySetValue: trySetStringFnValue("group", func(cmd Command) func(string) {
 				return (&cmd.(*Repack).Metadata).SetGroup
 			}),
 		},
 		{
-			Name:        "name",
-			Description: "Package name. If metadata file is provided, value will be ignored.",
+			Alias: []string{"name"},
 			TrySetValue: trySetStringFnValue("name", func(cmd Command) func(string) {
 				return (&cmd.(*Repack).Metadata).SetName
 			}),
 		},
 		{
-			Name:        "version",
-			Description: "Package version. If metadata file is provided, value will be ignored.",
-			TrySetValue: trySetStringFnValue("version", func(cmd Command) func(string) {
+			Name:        "newVersion",
+			Alias:       []string{"version"},
+			Description: "New package version to use.",
+			TrySetValue: trySetStringFnValue("newVersion", func(cmd Command) func(string) {
 				return (&cmd.(*Repack).Metadata).SetVersion
 			}),
 		},
 		{
-			Name:        "title",
-			Description: "Package title. If metadata file is provided, value will be ignored.",
+			Alias: []string{"title"},
 			TrySetValue: trySetStringFnValue("title", func(cmd Command) func(string) {
 				return (&cmd.(*Repack).Metadata).SetTitle
 			}),
 		},
 		{
-			Name:        "description",
-			Description: "Package description. If metadata file is provided, value will be ignored.",
+			Alias: []string{"description"},
 			TrySetValue: trySetStringFnValue("description", func(cmd Command) func(string) {
 				return (&cmd.(*Repack).Metadata).SetDescription
 			}),
 		},
 		{
-			Name:        "icon",
-			Description: "Icon absolute Url. If metadata file is provided, value will be ignored.",
+			Alias: []string{"icon"},
 			TrySetValue: trySetStringFnValue("icon", func(cmd Command) func(string) {
 				return (&cmd.(*Repack).Metadata).SetIconURL
 			}),
 		},
 		{
 			Name:        "note",
-			Description: "A description of the purpose for creating this upack file.",
+			Description: "A description of the purpose for repackaging that will be entered as the audit note.",
 			TrySetValue: trySetStringValue("note", func(cmd Command) *string {
 				return &cmd.(*Repack).Note
 			}),
 		},
 		{
-			Name:        "no-audit",
-			Description: "Do not store audit information in the UPack manifest.",
-			Flag:        true,
+			Alias: []string{"no-audit"},
+			Flag:  true,
 			TrySetValue: trySetBoolValue("no-audit", func(cmd Command) *bool {
 				return &cmd.(*Repack).NoAudit
 			}),
