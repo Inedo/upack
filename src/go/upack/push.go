@@ -45,7 +45,7 @@ func (*Push) ExtraArguments() []ExtraArgument {
 	return []ExtraArgument{
 		{
 			Name:        "user",
-			Description: "User name and password to use for servers that require authentication. Example: username:password",
+			Description: "User name and password to use for servers that require authentication. Example: \"«username»:«password»\" or \"api:«api-key»\"",
 			TrySetValue: trySetBasicAuthValue("user", func(cmd Command) **[2]string {
 				return &cmd.(*Push).Authentication
 			}),

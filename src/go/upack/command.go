@@ -124,7 +124,7 @@ func trySetBasicAuthValue(name string, f func(Command) **[2]string) func(Command
 
 		parts := strings.SplitN(*value, ":", 2)
 		if len(parts) != 2 {
-			fmt.Println("--"+name, "must be in the format \"username:password\".")
+			fmt.Println("--"+name, "must be in the format \"«username»:«password»\" or \"api:«api-key»\".")
 			return false
 		}
 

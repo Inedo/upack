@@ -24,7 +24,7 @@ namespace Inedo.ProGet.UPack
         public string Target { get; set; }
 
         [DisplayName("user")]
-        [Description("User name and password to use for servers that require authentication. Example: username:password")]
+        [Description("User name and password to use for servers that require authentication. Example: \"«username»:«password»\" or \"api:«api-key»\"")]
         [ExtraArgument]
         public NetworkCredential Authentication { get; set; }
 

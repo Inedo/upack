@@ -119,7 +119,7 @@ namespace Inedo.ProGet.UPack
                     var parts = value.Split(new[] { ':' }, 2);
                     if (parts.Length != 2)
                     {
-                        Console.WriteLine($@"--{this.DisplayName} must be in the format ""username:password"".");
+                        Console.WriteLine($"--{this.DisplayName} must be in the format \"«username»:«password»\" or \"api:«api-key»\".");
                         return false;
                     }
 
