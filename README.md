@@ -36,7 +36,7 @@ Pushes a ProGet universal package to the specified ProGet feed.
 
  - **`package`** - Path of a valid .upack file.
  - **`target`** - URL of a upack API endpoint.
- - `user` - User name and password to use for servers that require authentication. Example: username:password
+ - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`
 
 ### unpack
 
@@ -52,13 +52,13 @@ Extracts the contents of a ProGet universal package to a directory.
 
 Downloads the specified ProGet universal package and extracts its contents to a directory.
 
-    upack install «package» [«version»] --source=«source» --target=«target» [--user=«user»] [--comment=«comment»] [--overwrite] [--prerelease] [--userregistry] [--unregistered] [--cache]
+    upack install «package» [«version»] --source=«source» --target=«target» [--user=«authentication»] [--comment=«comment»] [--overwrite] [--prerelease] [--userregistry] [--unregistered] [--cache]
 
  - **`package`** - Package name and group, such as group/name.
  - `version` - Package version. If not specified, the latest version is retrieved.
  - `source` - URL of a upack API endpoint.
  - `target` - Directory where the contents of the package will be extracted.
- - `user` - User name and password to use for servers that require authentication. Example: username:password
+ - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`
  - `overwrite` - When specified, Overwrite files in the target directory.
  - `prerelease` - When version is not specified, will install the latest prerelase version instead of the latest stable version.
  - `comment` - The reason for installing the package, for the local registry.
@@ -90,11 +90,11 @@ Creates a new ProGet universal package by repackaging an existing package with a
 
 Verifies that a specified package hash matches the hash stored in a ProGet Universal feed.
 
-    upack verify «package» «source» [--user=«user»]
+    upack verify «package» «source» [--user=«authentication»]
 
  - **`package`** - Path of a valid .upack file.
  - **`source`** - URL of a upack API endpoint.
- - `user` - User name and password to use for servers that require authentication. Example: username:password
+ - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`
 
 ### hash
 
@@ -113,5 +113,5 @@ Displays metadata for a remote ProGet universal package.
  - **`package`** - Package name and group, such as group/name.
  - `version` - Package version. If not specified, the latest version is retrieved.
  - **`source`** - URL of a upack API endpoint.
- - `user` - User name and password to use for servers that require authentication. Example: username:password
+ - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`
  - `file` - The metadata file to display relative to the .upack root; the default is upack.json.
