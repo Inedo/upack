@@ -81,6 +81,12 @@ namespace Inedo.ProGet.UPack
         [DefaultValue(false)]
         public bool PreserveTimestamps { get; set; } = false;
 
+        [DisplayName("save-to-tempfile")]
+        [Description("Responses from the source server is saved to a temp file to save on memory when unpacking")]
+        [ExtraArgument]
+        [DefaultValue(false)]
+        public bool SaveToTempfile { get; set; } = false;
+
         public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
             var targetDirectory = this.TargetDirectory;
@@ -144,10 +150,29 @@ namespace Inedo.ProGet.UPack
                 }
             }
 
-            using (var package = new UniversalPackage(stream))
-            {
-                await UnpackZipAsync(this.TargetDirectory, this.Overwrite, package, this.PreserveTimestamps, cancellationToken);
+            if (SaveToTempfile) {
+                var tempFileName = Path.GetTempFileName();
+                var tempFile = new FileStream(tempFileName, FileMode.Create);
+                stream.CopyTo(tempFile, 1000000);
+                stream = tempFile;
             }
+            
+            try
+            {
+                using (var package = new UniversalPackage(stream))
+                {
+                    await UnpackZipAsync(this.TargetDirectory, this.Overwrite, package, this.PreserveTimestamps, cancellationToken);
+                }
+            }
+            finally 
+            {
+                if (SaveToTempfile) {
+                    var tempFileName = ((FileStream) stream).Name;
+                    stream.Close();
+                    File.Delete(tempFileName);
+                }
+            }
+            
 
             return 0;
         }
