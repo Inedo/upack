@@ -1,5 +1,7 @@
 # upack.exe
 
+[![Build status](https://buildmaster.inedo.com/api/ci-badges/image?API_Key=badges&$ApplicationId=10)](https://buildmaster.inedo.com/api/ci-badges/link?API_Key=badges&$ApplicationId=10)
+
 upack.exe is a command-line tool used to create and install universal packages; you can also see which packages are installed on a machine.
 
 ## Installation
