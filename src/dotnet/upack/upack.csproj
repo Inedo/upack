@@ -50,6 +50,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Inedo.UPack, Version=1.0.4.0, Culture=neutral, PublicKeyToken=473f66fe047b59d7, processorArchitecture=MSIL">
       <HintPath>..\packages\Inedo.UPack.1.0.4\lib\net45\Inedo.UPack.dll</HintPath>
@@ -81,6 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="app.manifest" />
     <None Include="ILMerge.props" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
