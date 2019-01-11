@@ -22,11 +22,13 @@ namespace Inedo.ProGet.UPack
         [DisplayName("source")]
         [Description("URL of a upack API endpoint.")]
         [PositionalArgument(1)]
+        [UseEnvironmentVariableAsDefault("UPACK_FEED")]
         public string SourceEndpoint { get; set; }
 
         [DisplayName("user")]
         [Description("User name and password to use for servers that require authentication. Example: \"«username»:«password»\" or \"api:«api-key»\"")]
         [ExtraArgument]
+        [UseEnvironmentVariableAsDefault("UPACK_USER")]
         public NetworkCredential Authentication { get; set; }
 
         public override async Task<int> RunAsync(CancellationToken cancellationToken)

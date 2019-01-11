@@ -88,6 +88,18 @@ namespace Inedo.ProGet.UPack
                                 hadError = true;
                             }
                         }
+                        else if (arg.EnvironmentVariable != null)
+                        {
+                            var value = Environment.GetEnvironmentVariable(arg.EnvironmentVariable, EnvironmentVariableTarget.Process) ?? Environment.GetEnvironmentVariable(arg.EnvironmentVariable, EnvironmentVariableTarget.User) ?? Environment.GetEnvironmentVariable(arg.EnvironmentVariable, EnvironmentVariableTarget.Machine);
+                            if (value == null && !arg.Optional)
+                                hadError = true;
+
+                            if (value != null)
+                            {
+                                if (!arg.TrySetValue(cmd, value))
+                                    hadError = true;
+                            }
+                        }
                         else if (!arg.Optional)
                         {
                             hadError = true;
@@ -109,6 +121,18 @@ namespace Inedo.ProGet.UPack
                                 hadError = true;
                             }
                             extra.Remove(alt ?? arg.DisplayName);
+                        }
+                        else if (arg.EnvironmentVariable != null)
+                        {
+                            var value = Environment.GetEnvironmentVariable(arg.EnvironmentVariable, EnvironmentVariableTarget.Process) ?? Environment.GetEnvironmentVariable(arg.EnvironmentVariable, EnvironmentVariableTarget.User) ?? Environment.GetEnvironmentVariable(arg.EnvironmentVariable, EnvironmentVariableTarget.Machine);
+                            if (value == null && !arg.Optional)
+                                hadError = true;
+
+                            if (value != null)
+                            {
+                                if (!arg.TrySetValue(cmd, value))
+                                    hadError = true;
+                            }
                         }
                         else if (!arg.Optional)
                         {

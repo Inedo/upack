@@ -41,6 +41,14 @@ namespace Inedo.ProGet.UPack
         {
         }
 
+        [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
+        public sealed class UseEnvironmentVariableAsDefaultAttribute : Attribute
+        {
+            public UseEnvironmentVariableAsDefaultAttribute(string environmentVariable) => this.EnvironmentVariable = environmentVariable;
+
+            public string EnvironmentVariable { get; }
+        }
+
         [AttributeUsage(AttributeTargets.Property, AllowMultiple = true, Inherited = true)]
         public sealed class AlternateNameAttribute : Attribute
         {
@@ -67,6 +75,7 @@ namespace Inedo.ProGet.UPack
             public string Description => p.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty;
             public object DefaultValue => p.GetCustomAttribute<DefaultValueAttribute>()?.Value;
             public bool ExpandPath => p.GetCustomAttribute<ExpandPathAttribute>() != null;
+            public string EnvironmentVariable => p.GetCustomAttribute<UseEnvironmentVariableAsDefaultAttribute>()?.EnvironmentVariable;
 
             public abstract string GetUsage();
 
