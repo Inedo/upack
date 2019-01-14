@@ -180,7 +180,7 @@ namespace Inedo.ProGet.UPack
                     s = $"[{s}]";
                 }
 
-                if (p.PropertyType == typeof(bool) && this.DefaultValue.Equals(false) && this.Optional)
+                if (p.PropertyType == typeof(bool) && !(this.DefaultValue as bool? ?? false) && this.Optional)
                 {
                     s = $"[--{this.DisplayName}]";
                 }

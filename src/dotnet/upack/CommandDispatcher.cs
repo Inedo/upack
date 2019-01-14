@@ -65,7 +65,7 @@ namespace Inedo.ProGet.UPack
             {
                 foreach (var command in commands)
                 {
-                    cmd = (Command)command.GetConstructor(new Type[0]).Invoke(new object[0]);
+                    cmd = (Command)Activator.CreateInstance(command);
                     if (!string.Equals(cmd.DisplayName, positional[0], StringComparison.OrdinalIgnoreCase))
                     {
                         cmd = null;
