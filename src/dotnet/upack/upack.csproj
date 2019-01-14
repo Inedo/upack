@@ -16,6 +16,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-    <PackageReference Include="Inedo.UPack" Version="1.0.5" />
+    <PackageReference Include="Inedo.UPack" Version="1.0.6" />
   </ItemGroup>
 </Project>
