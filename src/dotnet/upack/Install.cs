@@ -42,7 +42,7 @@ namespace Inedo.ProGet.UPack
         public NetworkCredential Authentication { get; set; }
 
         [DisplayName("overwrite")]
-        [Description("When specified, Overwrite files in the target directory.")]
+        [Description("When specified, overwrite files in the target directory.")]
         [ExtraArgument]
         [DefaultValue(false)]
         public bool Overwrite { get; set; } = false;
