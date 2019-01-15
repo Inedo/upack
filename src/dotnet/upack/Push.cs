@@ -1,12 +1,12 @@
-﻿using Inedo.UPack.Packaging;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Inedo.UPack.Packaging;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("push")]
     [Description("Pushes a ProGet universal package to the specified ProGet feed.")]

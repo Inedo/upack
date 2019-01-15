@@ -1,10 +1,10 @@
-﻿using Inedo.UPack.Packaging;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Inedo.UPack.Packaging;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("unpack")]
     [Description("Extracts the contents of a ProGet universal package to a directory.")]

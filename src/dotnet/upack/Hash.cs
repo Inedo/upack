@@ -2,10 +2,8 @@
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Inedo.UPack;
-using Inedo.UPack.Packaging;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("hash")]
     [Description("Calculates the SHA1 hash of a local package and writes it to standard output.")]

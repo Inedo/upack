@@ -4,9 +4,8 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Inedo.UPack;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("get")]
     [Description("Downloads a universal package from a feed without installing it.")]

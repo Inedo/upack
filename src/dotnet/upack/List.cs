@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Inedo.UPack.Packaging;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("list")]
     [Description("Lists packages installed in the local registry.")]

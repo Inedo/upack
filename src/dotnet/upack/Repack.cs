@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Inedo.UPack;
 using Inedo.UPack.Packaging;
 using Newtonsoft.Json.Linq;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("repack")]
     [Description("Creates a new ProGet universal package by repackaging an existing package with a new version number and audit information.")]

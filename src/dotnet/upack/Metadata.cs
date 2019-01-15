@@ -5,11 +5,10 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Inedo.UPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("metadata")]
     [Description("Displays metadata for a remote ProGet universal package.")]

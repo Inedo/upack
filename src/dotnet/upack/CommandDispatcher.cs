@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     public sealed class CommandDispatcher
     {

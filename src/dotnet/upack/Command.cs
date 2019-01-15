@@ -1,8 +1,4 @@
-﻿using Inedo.UPack;
-using Inedo.UPack.Net;
-using Inedo.UPack.Packaging;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -13,8 +9,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Inedo.UPack.Net;
+using Inedo.UPack.Packaging;
+using Newtonsoft.Json;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     public abstract class Command
     {

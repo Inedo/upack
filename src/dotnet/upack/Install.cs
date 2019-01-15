@@ -4,10 +4,9 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Inedo.UPack;
 using Inedo.UPack.Packaging;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("install")]
     [Description("Downloads the specified ProGet universal package and extracts its contents to a directory.")]

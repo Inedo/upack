@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     public sealed class Program
     {

@@ -3,10 +3,9 @@ using System.ComponentModel;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Inedo.UPack;
 using Inedo.UPack.Packaging;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("pack")]
     [Description("Creates a new ProGet universal package using specified metadata and source directory.")]

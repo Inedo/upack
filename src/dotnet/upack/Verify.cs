@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Inedo.UPack;
-using Inedo.UPack.Packaging;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     [DisplayName("verify")]
     [Description("Verifies that a specified package hash matches the hash stored in a ProGet Universal feed.")]

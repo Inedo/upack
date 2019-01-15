@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Inedo.ProGet.UPack
+namespace Inedo.UPack.CLI
 {
     public sealed class UpackException : Exception
     {
@@ -8,12 +8,12 @@ namespace Inedo.ProGet.UPack
         {
         }
 
-        public UpackException(string message) 
+        public UpackException(string message)
             : base(message)
         {
         }
 
-        public UpackException(string message, Exception innerException) 
+        public UpackException(string message, Exception innerException)
             : base(message, innerException)
         {
         }
