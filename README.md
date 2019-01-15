@@ -16,7 +16,7 @@ Where command is one of the following:
 
 ### pack
 
-Creates a new ProGet universal package using specified metadata and source directory.
+Creates a new universal package using specified metadata and source directory.
     
     upack pack «source» [--metadata=«metadata»] [--targetDirectory=«targetDirectory»] [--group=«group»] [--name=«name»] [--version=«version»] [--title=«title»] [--description=«description»] [--icon=«icon»]
 
@@ -32,17 +32,17 @@ Creates a new ProGet universal package using specified metadata and source direc
 
 ### push
 
-Pushes a ProGet universal package to the specified ProGet feed.
+Pushes a universal package to the specified feed.
 
     upack push «package» «target» [--user=«authentication»]
 
  - **`package`** - Path of a valid .upack file.
- - **`target`** - URL of a upack API endpoint.
+ - **`target`** - URL of a upack API endpoint. If not specified, the `UPACK_FEED` environment variable is used.
  - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`
 
 ### unpack
 
-Extracts the contents of a ProGet universal package to a directory.
+Extracts the contents of a universal package to a directory.
 
     upack unpack «package» «target» [--overwrite]
 
@@ -52,21 +52,35 @@ Extracts the contents of a ProGet universal package to a directory.
 
 ### install
 
-Downloads the specified ProGet universal package and extracts its contents to a directory.
+Downloads the specified universal package and extracts its contents to a directory.
 
     upack install «package» [«version»] --source=«source» --target=«target» [--user=«authentication»] [--comment=«comment»] [--overwrite] [--prerelease] [--userregistry] [--unregistered] [--cache]
 
  - **`package`** - Package name and group, such as group/name.
  - `version` - Package version. If not specified, the latest version is retrieved.
- - `source` - URL of a upack API endpoint.
+ - `source` - URL of a upack API endpoint. If not specified, the `UPACK_FEED` environment variable is used.
  - `target` - Directory where the contents of the package will be extracted.
- - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`
+ - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
  - `overwrite` - When specified, Overwrite files in the target directory.
  - `prerelease` - When version is not specified, will install the latest prerelase version instead of the latest stable version.
  - `comment` - The reason for installing the package, for the local registry.
  - `userregistry` - Register the package in the user registry instead of the machine registry.
  - `unregistered` - Do not register the package in a local registry.
  - `cache` - Cache the contents of the package in the local registry.
+
+### get
+
+Downloads a universal package from a feed without installing it.
+
+    upack get «package» [«version»] --source=«source» --target=«target» [--user=«authentication»] [--overwrite] [--prerelease]
+
+ - **`package`** - Package name and group, such as group/name.
+ - `version` - Package version. If not specified, the latest version is retrieved.
+ - `source` - URL of a upack API endpoint. If not specified, the `UPACK_FEED` environment variable is used.
+ - `target` - Directory where the contents of the package will be extracted.
+ - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
+ - `overwrite` - When specified, overwrite files in the target directory.
+ - `prerelease` - When version is not specified, will download the latest prerelase version instead of the latest stable version.
 
 ### list
 
@@ -78,7 +92,7 @@ Lists packages installed in the local registry.
 
 ### repack
 
-Creates a new ProGet universal package by repackaging an existing package with a new version number and audit information.
+Creates a new universal package by repackaging an existing package with a new version number and audit information.
 
     upack repack «source» [--newVersion=«newVersion»] [--targetDirectory=«targetDirectory»] [--note=«auditNote»] [--overwrite] 
 
@@ -90,13 +104,13 @@ Creates a new ProGet universal package by repackaging an existing package with a
 
 ### verify
 
-Verifies that a specified package hash matches the hash stored in a ProGet Universal feed.
+Verifies that a specified package hash matches the hash stored in a universal feed.
 
     upack verify «package» «source» [--user=«authentication»]
 
  - **`package`** - Path of a valid .upack file.
- - **`source`** - URL of a upack API endpoint.
- - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`
+ - **`source`** - URL of a upack API endpoint. If not specified, the `UPACK_FEED` environment variable is used.
+ - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
 
 ### hash
 
@@ -108,12 +122,12 @@ Calculates the SHA1 hash of a local package and writes it to standard output.
 
 ### metadata
 
-Displays metadata for a remote ProGet universal package.
+Displays metadata for a remote universal package.
 
     upack metadata «package» [«version»] --source=«source» [--user=«authentication»] [--file=«file»]
 
  - **`package`** - Package name and group, such as group/name.
  - `version` - Package version. If not specified, the latest version is retrieved.
- - **`source`** - URL of a upack API endpoint.
- - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`
+ - **`source`** - URL of a upack API endpoint. If not specified, the `UPACK_FEED` environment variable is used.
+ - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
  - `file` - The metadata file to display relative to the .upack root; the default is upack.json.
