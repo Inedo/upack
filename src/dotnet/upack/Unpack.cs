@@ -7,7 +7,7 @@ using Inedo.UPack.Packaging;
 namespace Inedo.UPack.CLI
 {
     [DisplayName("unpack")]
-    [Description("Extracts the contents of a ProGet universal package to a directory.")]
+    [Description("Extracts the contents of a universal package to a directory.")]
     public sealed class Unpack : Command
     {
         [DisplayName("package")]

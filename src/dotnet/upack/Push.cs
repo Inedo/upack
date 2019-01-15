@@ -9,7 +9,7 @@ using Inedo.UPack.Packaging;
 namespace Inedo.UPack.CLI
 {
     [DisplayName("push")]
-    [Description("Pushes a ProGet universal package to the specified ProGet feed.")]
+    [Description("Pushes a universal package to the specified feed.")]
     public sealed class Push : Command
     {
         [DisplayName("package")]

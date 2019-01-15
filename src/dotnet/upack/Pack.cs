@@ -8,7 +8,7 @@ using Inedo.UPack.Packaging;
 namespace Inedo.UPack.CLI
 {
     [DisplayName("pack")]
-    [Description("Creates a new ProGet universal package using specified metadata and source directory.")]
+    [Description("Creates a new universal package using specified metadata and source directory.")]
     public sealed class Pack : Command
     {
         [DisplayName("manifest")]

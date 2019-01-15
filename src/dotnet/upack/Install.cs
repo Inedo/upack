@@ -9,7 +9,7 @@ using Inedo.UPack.Packaging;
 namespace Inedo.UPack.CLI
 {
     [DisplayName("install")]
-    [Description("Downloads the specified ProGet universal package and extracts its contents to a directory.")]
+    [Description("Downloads the specified universal package and extracts its contents to a directory.")]
     public sealed class Install : Command
     {
         [DisplayName("package")]

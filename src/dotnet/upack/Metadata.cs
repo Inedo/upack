@@ -11,7 +11,7 @@ using Newtonsoft.Json.Linq;
 namespace Inedo.UPack.CLI
 {
     [DisplayName("metadata")]
-    [Description("Displays metadata for a remote ProGet universal package.")]
+    [Description("Displays metadata for a remote universal package.")]
     public sealed class Metadata : Command
     {
         [DisplayName("package")]

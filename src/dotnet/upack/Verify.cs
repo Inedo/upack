@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Inedo.UPack.CLI
 {
     [DisplayName("verify")]
-    [Description("Verifies that a specified package hash matches the hash stored in a ProGet Universal feed.")]
+    [Description("Verifies that a specified package hash matches the hash stored in a universal feed.")]
     public sealed class Verify : Command
     {
         [DisplayName("package")]

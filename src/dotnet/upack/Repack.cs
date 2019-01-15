@@ -11,7 +11,7 @@ using Newtonsoft.Json.Linq;
 namespace Inedo.UPack.CLI
 {
     [DisplayName("repack")]
-    [Description("Creates a new ProGet universal package by repackaging an existing package with a new version number and audit information.")]
+    [Description("Creates a new universal package by repackaging an existing package with a new version number and audit information.")]
     public sealed class Repack : Command
     {
         [Obsolete]

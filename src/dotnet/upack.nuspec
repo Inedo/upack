@@ -6,8 +6,8 @@
     <version>0.0.0</version>
     <authors>Inedo</authors>
     <owners>Inedo</owners>
-    <summary>Command-line client for ProGet Universal feeds.</summary>
-    <description>upack is a simple CLI tool for building, installing, and publishing universal packages to ProGet feeds.</description>
+    <summary>Command-line client for working with universal packages.</summary>
+    <description>upack is a simple CLI tool for building, installing, and publishing universal packages to universal feeds.</description>
     <projectUrl>https://inedo.com/upack</projectUrl>
     <tags>proget upack universal</tags>
     <copyright>Inedo 2017</copyright>
