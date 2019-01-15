@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.IO;
 using System.Net;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Inedo.UPack;
@@ -86,7 +85,7 @@ namespace Inedo.ProGet.UPack
         public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
             var targetDirectory = this.TargetDirectory;
-            if (String.IsNullOrEmpty(targetDirectory))
+            if (string.IsNullOrEmpty(targetDirectory))
                 targetDirectory = Environment.CurrentDirectory;
 
             var client = CreateClient(this.SourceUrl, this.Authentication);
@@ -120,11 +119,11 @@ namespace Inedo.ProGet.UPack
                             Group = id.Group,
                             Name = id.Name,
                             Version = version.ToString(),
-                            InstallPath = this.TargetDirectory,
+                            InstallPath = targetDirectory,
                             InstallationDate = DateTimeOffset.Now.ToString("o"),
                             InstallationReason = this.Comment,
                             InstalledBy = Environment.UserName,
-                            InstalledUsing = Assembly.GetEntryAssembly().GetName().Name + "/" + Assembly.GetEntryAssembly().GetName().Version.ToString()
+                            InstalledUsing = "upack/" + typeof(Program).Assembly.GetName().Version.ToString()
                         });
                     }
                     finally
@@ -148,7 +147,7 @@ namespace Inedo.ProGet.UPack
 
             using (var package = new UniversalPackage(stream))
             {
-                await UnpackZipAsync(this.TargetDirectory, this.Overwrite, package, this.PreserveTimestamps, cancellationToken);
+                await UnpackZipAsync(targetDirectory, this.Overwrite, package, this.PreserveTimestamps, cancellationToken);
             }
 
             return 0;
