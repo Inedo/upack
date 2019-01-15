@@ -98,22 +98,21 @@ namespace Inedo.ProGet.UPack
             {
                 throw new UpackException("Invalid package ID: " + ex.Message, ex);
             }
+
             var version = await GetVersionAsync(client, id, this.Version, this.Prerelease, cancellationToken);
-            
-            Stream stream = null;
+
+            using (var package = new UniversalPackage(await openPackageAsync()))
+            {
+                await UnpackZipAsync(targetDirectory, this.Overwrite, package, this.PreserveTimestamps, cancellationToken);
+            }
+
             if (!this.Unregistered)
             {
                 using (var registry = PackageRegistry.GetRegistry(this.UserRegistry))
                 {
                     await registry.LockAsync(cancellationToken);
-                    try
-                    {
-                        if (this.CachePackages)
-                        {
-                            stream = await registry.TryOpenFromCacheAsync(id, version, cancellationToken);
-                        }
-
-                        await registry.RegisterPackageAsync(new RegisteredPackage
+                    await registry.RegisterPackageAsync(
+                        new RegisteredPackage
                         {
                             FeedUrl = this.SourceUrl,
                             Group = id.Group,
@@ -124,33 +123,45 @@ namespace Inedo.ProGet.UPack
                             InstallationReason = this.Comment,
                             InstalledBy = Environment.UserName,
                             InstalledUsing = "upack/" + typeof(Program).Assembly.GetName().Version.ToString()
-                        });
-                    }
-                    finally
-                    {
-                        await registry.UnlockAsync();
-                    }
+                        }
+                    );
                 }
-            }
-
-            if (stream == null)
-            {
-                try
-                {
-                    stream = await client.GetPackageStreamAsync(id, version, cancellationToken);
-                }
-                catch (WebException ex)
-                {
-                    throw ConvertWebException(ex, PackageNotFoundMessage);
-                }
-            }
-
-            using (var package = new UniversalPackage(stream))
-            {
-                await UnpackZipAsync(targetDirectory, this.Overwrite, package, this.PreserveTimestamps, cancellationToken);
             }
 
             return 0;
+
+            async Task<Stream> openPackageAsync()
+            {
+                using (var registry = PackageRegistry.GetRegistry(this.UserRegistry))
+                {
+                    if (this.CachePackages)
+                    {
+                        var s = await registry.TryOpenFromCacheAsync(id, version, cancellationToken);
+                        if (s != null)
+                            return s;
+                    }
+
+                    try
+                    {
+                        var s = await client.GetPackageStreamAsync(id, version, cancellationToken);
+                        if (s == null)
+                            throw new UpackException(PackageNotFoundMessage);
+
+                        if (this.CachePackages)
+                        {
+                            await registry.WriteToCacheAsync(id, version, s, cancellationToken);
+                            s.Dispose();
+                            return await registry.TryOpenFromCacheAsync(id, version, cancellationToken);
+                        }
+
+                        return s;
+                    }
+                    catch (WebException ex)
+                    {
+                        throw ConvertWebException(ex, PackageNotFoundMessage);
+                    }
+                }
+            }
         }
     }
 }
