@@ -103,6 +103,8 @@ namespace Inedo.ProGet.UPack
 
             using (var package = new UniversalPackage(await openPackageAsync()))
             {
+                id = new UniversalPackageId(package.Group, package.Name);
+                version = package.Version;
                 await UnpackZipAsync(targetDirectory, this.Overwrite, package, this.PreserveTimestamps, cancellationToken);
             }
 
