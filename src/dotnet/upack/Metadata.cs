@@ -64,11 +64,33 @@ namespace Inedo.UPack.CLI
             }
 
             JObject data;
-            using (var stream = await client.GetPackageFileStreamAsync(packageId, version, string.IsNullOrEmpty(this.FilePath) ? "upack.json" : this.FilePath, cancellationToken))
-            using (var reader = new StreamReader(stream, Encoding.UTF8, true, 4096, true))
-            using (var jsonReader = new JsonTextReader(reader) { CloseInput = false })
+            try
             {
-                data = await JObject.LoadAsync(jsonReader, cancellationToken);
+                using (var stream = await client.GetPackageFileStreamAsync(packageId, version, string.IsNullOrEmpty(this.FilePath) ? "upack.json" : this.FilePath, cancellationToken))
+                using (var reader = new StreamReader(stream, Encoding.UTF8, true, 4096, true))
+                using (var jsonReader = new JsonTextReader(reader) { CloseInput = false })
+                {
+                    data = await JObject.LoadAsync(jsonReader, cancellationToken);
+                }
+            }
+            catch (WebException ex) when (ex.Response is HttpWebResponse r)
+            {
+                var error = $"Server returned {(int)r.StatusCode}: ";
+                if (string.Equals(r.ContentType, "text/plain", StringComparison.OrdinalIgnoreCase))
+                {
+                    using (var reader = new StreamReader(r.GetResponseStream(), Encoding.UTF8))
+                    {
+                        var buffer = new char[1000];
+                        reader.Read(buffer, 0, buffer.Length);
+                        error += new string(buffer);
+                    }
+                }
+                else
+                {
+                    error += r.StatusDescription;
+                }
+
+                throw new UpackException(error, ex);
             }
 
             foreach (var p in data.Properties())
