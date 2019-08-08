@@ -131,3 +131,9 @@ Displays metadata for a remote universal package.
  - **`source`** - URL of a upack API endpoint. If not specified, the `UPACK_FEED` environment variable is used.
  - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
  - `file` - The metadata file to display relative to the .upack root; the default is upack.json.
+
+### version
+
+Outputs the installed version of upack.
+
+    upack version
