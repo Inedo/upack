@@ -298,7 +298,7 @@ func (r Registry) GetOrDownload(group, name string, version *UniversalPackageVer
 		if err != nil {
 			return nil, nil, err
 		}
-		name := f.Name()
+		temp_file_name := f.Name()
 
 		err = r.cachePackageToDisk(f, group, name, version, feedURL, feedAuthentication)
 		if err == nil {
@@ -306,13 +306,13 @@ func (r Registry) GetOrDownload(group, name string, version *UniversalPackageVer
 		}
 		if err != nil {
 			_ = f.Close()
-			_ = os.Remove(name)
+			_ = os.Remove(temp_file_name)
 			return nil, nil, err
 		}
 
 		return f, func() error {
 			err := f.Close()
-			if e := os.Remove(name); err == nil {
+			if e := os.Remove(temp_file_name); err == nil {
 				err = e
 			}
 			return err
