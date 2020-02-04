@@ -10,7 +10,7 @@ namespace Inedo.UPack.CLI
 {
     public sealed class CommandDispatcher
     {
-        public static CommandDispatcher Default => new CommandDispatcher(typeof(Pack), typeof(Push), typeof(Unpack), typeof(Install), typeof(List), typeof(Repack), typeof(Verify), typeof(Hash), typeof(Metadata), typeof(Get));
+        public static CommandDispatcher Default => new CommandDispatcher(typeof(Pack), typeof(Push), typeof(Unpack), typeof(Install), typeof(List), typeof(Repack), typeof(Verify), typeof(Hash), typeof(Metadata), typeof(Get), typeof(Version));
 
         private readonly IEnumerable<Type> commands;
 
