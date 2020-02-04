@@ -19,10 +19,10 @@ namespace Inedo.UPack.CLI
         public string Manifest { get; set; }
 
         [DisplayName("source")]
-        [Description("Directory containing files to add to the package.")]
+        [Description("File or directory containing files to add to the package.")]
         [PositionalArgument(0)]
         [ExpandPath]
-        public string SourceDirectory { get; set; }
+        public string SourcePath { get; set; }
 
         [DisplayName("targetDirectory")]
         [Description("Directory where the .upack file will be created. If not specified, the current working directory is used.")]
@@ -126,16 +126,16 @@ namespace Inedo.UPack.CLI
                 info["createdBy"] = Environment.UserName;
             }
 
-            if (!Directory.Exists(this.SourceDirectory))
+            if (!Directory.Exists(this.SourcePath) && !File.Exists(this.SourcePath))
             {
-                Console.Error.WriteLine($"The source directory '{this.SourceDirectory}' does not exist.");
+                Console.Error.WriteLine($"The source directory '{this.SourcePath}' does not exist.");
                 return 2;
             }
 
             string relativePackageFileName = $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack";
             string targetFileName = Path.Combine(this.TargetDirectory ?? Environment.CurrentDirectory, relativePackageFileName);
 
-            if (File.Exists(Path.Combine(this.SourceDirectory, relativePackageFileName)))
+            if (File.Exists(Path.Combine(this.SourcePath, relativePackageFileName)))
             {
                 Console.Error.WriteLine("Warning: output file already exists in source directory and may be included inadvertently in the package contents.");
             }
@@ -143,13 +143,23 @@ namespace Inedo.UPack.CLI
             string tmpPath = Path.GetTempFileName();
             using (var builder = new UniversalPackageBuilder(tmpPath, info))
             {
-                await builder.AddContentsAsync(
-                    this.SourceDirectory, 
-                    "/", 
-                    true, 
-                    s => string.IsNullOrWhiteSpace(this.Manifest) || !string.Equals(s, "upack.json", StringComparison.OrdinalIgnoreCase), 
-                    cancellationToken
-                );
+                if (Directory.Exists(this.SourcePath))
+                {
+                    await builder.AddContentsAsync(
+                        this.SourcePath,
+                        "/",
+                        true,
+                        s => string.IsNullOrWhiteSpace(this.Manifest) || !string.Equals(s, "upack.json", StringComparison.OrdinalIgnoreCase),
+                        cancellationToken
+                    );
+                }
+                else
+                {
+                    using (var file = File.Open(this.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        await builder.AddFileAsync(file, Path.GetFileName(this.SourcePath), File.GetLastWriteTimeUtc(this.SourcePath), cancellationToken);
+                    }
+                }
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(targetFileName));
