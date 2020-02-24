@@ -6,11 +6,25 @@ upack.exe is a command-line tool used to create and install universal packages; 
 
 ## Installation
 
-The upack command-line tool does not require any installation; you can download directly from the [GitHub Releases Page](https://github.com/Inedo/upack/releases) or as a [Chocolatey Package](https://chocolatey.org/packages/upack).
+#### On Windows:
+
+The upack command-line tool does not require any installation; you can download directly from the [GitHub Releases Page](https://github.com/Inedo/upack/releases).
+
+#### .NET Core (Linux, Unix, etc...):
+
+You will need to install the [.NET Core Runtime 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1) and download the latest .Net Core 3.1 upack release from the [GitHub Releases Page](https://github.com/Inedo/upack/releases).  
 
 ## Command Line Reference
 
+##### On Windows:
+
     upack «command»
+
+##### On .NET Core:
+
+When running the .NET Core version of you upack, you will need to use `dotnet upack.dll` instead of `upack`.
+
+    dotnet upack.dll «command»
 
 Where command is one of the following:
 
