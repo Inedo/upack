@@ -22,7 +22,7 @@ You will need to install the [.NET Core Runtime 3.1](https://dotnet.microsoft.co
 
 ##### On .NET Core:
 
-When running the .NET Core version of you upack, you will need to use `dotnet upack.dll` instead of `upack`.
+When running the .NET Core version of upack, you will need to use `dotnet upack.dll` instead of `upack`.
 
     dotnet upack.dll «command»
 
