@@ -20,11 +20,11 @@ You will need to install the [.NET Core Runtime 3.1](https://dotnet.microsoft.co
 
     upack «command»
 
-##### On .NET Core:
+##### On Linux:
 
-When running the .NET Core version of upack, you will need to use `dotnet upack.dll` instead of `upack`.
+When running the .NET Core version of upack on Linux, you will need to use `dotnet upack.exe` instead of `upack`.
 
-    dotnet upack.dll «command»
+    dotnet upack.exe «command»
 
 Where command is one of the following:
 
