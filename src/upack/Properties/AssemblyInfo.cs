@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("UPack command line client")]
 [assembly: AssemblyCompany("Inedo")]
 [assembly: AssemblyProduct("upack")]
-[assembly: AssemblyCopyright("Copyright © Inedo 2017")]
+[assembly: AssemblyCopyright("Copyright © Inedo 2020")]
 [assembly: ComVisible(false)]
 
 [assembly: AssemblyVersion("0.0.0.0")]
