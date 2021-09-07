@@ -389,7 +389,10 @@ namespace Inedo.UPack.CLI
             if (!versions.Any())
                 throw new UpackException($"No versions of package {id} found.");
 
-            return versions.Max(v => v.Version);
+            var matchingVersions = versions.Where(v => v.Version.Prerelease != null == prerelease).ToArray();
+            if (!matchingVersions.Any())
+                throw new UpackException($"No {(prerelease ? "pre" : "")}release versions of package {id} found.");
+            return matchingVersions.Max(v => v.Version);
         }
 
         internal const string PackageNotFoundMessage = "The specified universal package was not found at the given URL";
