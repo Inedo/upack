@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -110,16 +111,7 @@ namespace Inedo.UPack.CLI
 
             if (!this.NoAudit)
             {
-                JArray history;
-                if (info.ContainsKey("repackageHistory"))
-                {
-                    history = (JArray)info["repackageHistory"];
-                }
-                else
-                {
-                    history = new JArray();
-                    info["repackageHistory"] = history;
-                }
+                var history = GetHistoryAsJArray(info);
 
                 var entry = new Dictionary<string, object>
                 {
@@ -135,6 +127,7 @@ namespace Inedo.UPack.CLI
                 }
 
                 history.Add(JObject.FromObject(entry));
+                info["repackageHistory"] = history;
             }
 
             string relativePackageFileName = $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack";
@@ -176,6 +169,11 @@ namespace Inedo.UPack.CLI
 
             return 0;
         }
+
+        private static JArray GetHistoryAsJArray(UniversalPackageMetadata info) =>
+            info.ContainsKey("repackageHistory") 
+                ? JArray.FromObject(info["repackageHistory"]) 
+                : new JArray();
 
         private async Task<UniversalPackageMetadata> GetMetadataToMergeAsync()
         {
