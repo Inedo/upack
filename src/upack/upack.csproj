@@ -11,7 +11,7 @@
     <RootNamespace>Inedo.UPack.CLI</RootNamespace>
     <ImplicitUsings>true</ImplicitUsings>
     <PackAsTool>true</PackAsTool>
-    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>inedo proget upack universal</PackageTags>
     <PackageProjectUrl>https://github.com/Inedo/upack</PackageProjectUrl>
