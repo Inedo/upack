@@ -1,8 +1,4 @@
-﻿using System;
-using System.ComponentModel;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 using Inedo.UPack.Packaging;
 
 namespace Inedo.UPack.CLI
@@ -100,10 +96,8 @@ namespace Inedo.UPack.CLI
                     return 2;
                 }
 
-                using (var metadataStream = File.OpenRead(this.Manifest))
-                {
-                    info = await ReadManifestAsync(metadataStream);
-                }
+                using var metadataStream = File.OpenRead(this.Manifest);
+                info = UniversalPackageMetadata.Parse(metadataStream);
             }
 
             var error = ValidateManifest(info);

@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
+﻿using System.ComponentModel;
 using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Inedo.UPack.Net;
 using Inedo.UPack.Packaging;
-using Newtonsoft.Json;
 
 namespace Inedo.UPack.CLI
 {
@@ -243,15 +236,6 @@ namespace Inedo.UPack.CLI
             return s.ToString();
         }
 
-        internal static async Task<UniversalPackageMetadata> ReadManifestAsync(Stream metadataStream)
-        {
-            using (var reader = new StreamReader(metadataStream))
-            {
-                var text = await reader.ReadToEndAsync();
-                return JsonConvert.DeserializeObject<UniversalPackageMetadata>(text);
-            }
-        }
-
         internal static string ValidateManifest(UniversalPackageMetadata info)
         {
             if (info.Group != null)
@@ -460,12 +444,10 @@ namespace Inedo.UPack.CLI
 
         internal static HexString GetSHA1(string filePath)
         {
-            using (var file = File.OpenRead(filePath))
-            using (var hash = HashAlgorithm.Create("SHA1"))
-            {
-                var bytes = hash.ComputeHash(file);
-                return new HexString(bytes);
-            }
+            using var file = File.OpenRead(filePath);
+            using var hash = SHA1.Create();
+            var bytes = hash.ComputeHash(file);
+            return new HexString(bytes);
         }
 
         internal static UniversalPackageMetadata GetPackageMetadata(string zipFileName)

@@ -1,9 +1,5 @@
-﻿using System;
-using System.ComponentModel;
-using System.IO;
+﻿using System.ComponentModel;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 using Inedo.UPack.Packaging;
 
 namespace Inedo.UPack.CLI

@@ -1,13 +1,5 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 using Inedo.UPack.Packaging;
-using Newtonsoft.Json.Linq;
 
 namespace Inedo.UPack.CLI
 {
@@ -92,7 +84,7 @@ namespace Inedo.UPack.CLI
             }
 
             var info = GetPackageMetadata(this.SourcePath);
-            var infoToMerge = await GetMetadataToMergeAsync();
+            var infoToMerge = GetMetadataToMerge();
             var hash = GetSHA1(this.SourcePath);
 
             var id = (string.IsNullOrEmpty(info.Group) ? "" : info.Group + "/") + info.Name + ":" + info.Version + ":" + hash;
@@ -111,23 +103,18 @@ namespace Inedo.UPack.CLI
 
             if (!this.NoAudit)
             {
-                var history = GetHistoryAsJArray(info);
-
-                var entry = new Dictionary<string, object>
+                var entry = new RepackageHistoryEntry
                 {
-                    { "id", id },
-                    { "date", DateTime.UtcNow.ToString("u") },
-                    { "using", "upack/" + typeof(Repack).Assembly.GetName().Version.ToString(3) },
-                    { "by", Environment.UserName }
+                    Id = id,
+                    Date = DateTimeOffset.Now,
+                    Using = "upack/" + typeof(Repack).Assembly.GetName().Version.ToString(3),
+                    By = Environment.UserName
                 };
 
                 if (!string.IsNullOrEmpty(this.Note))
-                {
-                    entry["reason"] = this.Note;
-                }
+                    entry.Reason = this.Note;
 
-                history.Add(JObject.FromObject(entry));
-                info["repackageHistory"] = history;
+                info.RepackageHistory.Add(entry);
             }
 
             string relativePackageFileName = $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack";
@@ -170,12 +157,7 @@ namespace Inedo.UPack.CLI
             return 0;
         }
 
-        private static JArray GetHistoryAsJArray(UniversalPackageMetadata info) =>
-            info.ContainsKey("repackageHistory") 
-                ? JArray.FromObject(info["repackageHistory"]) 
-                : new JArray();
-
-        private async Task<UniversalPackageMetadata> GetMetadataToMergeAsync()
+        private UniversalPackageMetadata GetMetadataToMerge()
         {
             if (string.IsNullOrWhiteSpace(this.Manifest))
             {
@@ -193,10 +175,8 @@ namespace Inedo.UPack.CLI
             {
                 try
                 {
-                    using (var metadataStream = File.OpenRead(this.Manifest))
-                    {
-                        return await ReadManifestAsync(metadataStream);
-                    }
+                    using var metadataStream = File.OpenRead(this.Manifest);
+                    return UniversalPackageMetadata.Parse(metadataStream);
                 }
                 catch (Exception ex)
                 {

@@ -8,11 +8,16 @@
     <Description>upack is a simple CLI tool for building, installing, and publishing universal packages to upack feeds.</Description>
     <Copyright>Copyright © Inedo 2022</Copyright>
     <OutputType>Exe</OutputType>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RootNamespace>Inedo.UPack.CLI</RootNamespace>
+    <ImplicitUsings>true</ImplicitUsings>
+    <PackAsTool>true</PackAsTool>
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>inedo proget upack universal</PackageTags>
+    <PackageProjectUrl>https://github.com/Inedo/upack</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Inedo/upack.git</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="Inedo.UPack" Version="1.0.7" />
+    <PackageReference Include="Inedo.UPack" Version="2.0.1" />
   </ItemGroup>
 </Project>

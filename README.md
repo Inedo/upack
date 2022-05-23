@@ -1,18 +1,20 @@
-# upack.exe
+# upack
 
 [![Build status](https://buildmaster.inedo.com/api/ci-badges/image?API_Key=badges&$ApplicationId=10)](https://buildmaster.inedo.com/api/ci-badges/link?API_Key=badges&$ApplicationId=10)
 
-upack.exe is a command-line tool used to create and install universal packages; you can also see which packages are installed on a machine.
+upack is a command-line tool used to create and install universal packages; you can also see which packages are installed on a machine.
 
 ## Installation
 
-#### On Windows:
+upack requires the [.NET 6 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/6.0/runtime).
 
-The upack command-line tool does not require any installation; you can download directly from the [GitHub Releases Page](https://github.com/Inedo/upack/releases).
+##### Use dotnet tool install:
 
-#### .NET Core (Linux, Unix, etc...):
+upack is available as a dotnet tool. You can install it using `dotnet tool install upack` and then execute it using `dotnet upack`.
 
-You will need to install the [.NET Core Runtime 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1) and download the latest .Net Core 3.1 upack release from the [GitHub Releases Page](https://github.com/Inedo/upack/releases).  
+##### Download Tool:
+
+If you don't want to use upack as a dotnet tool, you can download it from the [GitHub Releases Page](https://github.com/Inedo/upack/releases) instead.
 
 ## Command Line Reference
 

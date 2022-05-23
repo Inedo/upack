@@ -1,12 +1,6 @@
-using System;
 using System.ComponentModel;
-using System.IO;
 using System.Net;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 namespace Inedo.UPack.CLI
 {
@@ -63,40 +57,11 @@ namespace Inedo.UPack.CLI
                     throw new UpackException($"Invalid UPack version number: {this.Version}");
             }
 
-            JObject data;
-            try
-            {
-                using (var stream = await client.GetPackageFileStreamAsync(packageId, version, string.IsNullOrEmpty(this.FilePath) ? "upack.json" : this.FilePath, cancellationToken))
-                using (var reader = new StreamReader(stream, Encoding.UTF8, true, 4096, true))
-                using (var jsonReader = new JsonTextReader(reader) { CloseInput = false })
-                {
-                    data = await JObject.LoadAsync(jsonReader, cancellationToken);
-                }
-            }
-            catch (WebException ex) when (ex.Response is HttpWebResponse r)
-            {
-                var error = $"Server returned {(int)r.StatusCode}: ";
-                if (string.Equals(r.ContentType, "text/plain", StringComparison.OrdinalIgnoreCase))
-                {
-                    using (var reader = new StreamReader(r.GetResponseStream(), Encoding.UTF8))
-                    {
-                        var buffer = new char[1000];
-                        reader.Read(buffer, 0, buffer.Length);
-                        error += new string(buffer);
-                    }
-                }
-                else
-                {
-                    error += r.StatusDescription;
-                }
+            using var stream = await client.GetPackageFileStreamAsync(packageId, version, string.IsNullOrEmpty(this.FilePath) ? "upack.json" : this.FilePath, cancellationToken);
+            var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
-                throw new UpackException(error, ex);
-            }
-
-            foreach (var p in data.Properties())
-            {
+            foreach (var p in doc.RootElement.EnumerateObject())
                 Console.WriteLine($"{p.Name} = {p.Value}");
-            }
 
             return 0;
         }

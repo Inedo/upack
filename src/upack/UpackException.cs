@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Inedo.UPack.CLI
+﻿namespace Inedo.UPack.CLI
 {
     public sealed class UpackException : Exception
     {
