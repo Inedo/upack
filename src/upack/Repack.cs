@@ -117,7 +117,7 @@ namespace Inedo.UPack.CLI
                 info.RepackageHistory.Add(entry);
             }
 
-            string relativePackageFileName = $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack";
+            string relativePackageFileName = $"{info.Name}-{info.Version:U}.upack";
             string targetFileName = Path.Combine(this.TargetDirectory ?? Environment.CurrentDirectory, relativePackageFileName);
 
             if (!this.Overwrite && File.Exists(targetFileName))
