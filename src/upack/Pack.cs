@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.IO.Compression;
 using Inedo.UPack.Packaging;
 
 namespace Inedo.UPack.CLI
@@ -66,12 +67,37 @@ namespace Inedo.UPack.CLI
         [ExtraArgument]
         public string Note { get; set; }
 
+        [DisplayName("compression-level")]
+        [Description("Compression level to use for files added to the upack. Valid values are optimal, fast, or none.")]
+        [ExtraArgument]
+        public string Compression { get; set; }
+
         public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
             if (this.NoAudit && !string.IsNullOrEmpty(this.Note))
             {
                 Console.Error.WriteLine("--no-audit cannot be used with --note.");
                 return 2;
+            }
+
+            var compressionLevel = CompressionLevel.Optimal;
+            if (!string.IsNullOrWhiteSpace(this.Compression))
+            {
+                CompressionLevel? level = this.Compression.ToLowerInvariant() switch
+                {
+                    "optimal" => CompressionLevel.Optimal,
+                    "fast" or "fastest" => CompressionLevel.Fastest,
+                    "none" or "nocompression" or "store" => CompressionLevel.NoCompression,
+                    _ => null
+                };
+
+                if (!level.HasValue)
+                {
+                    Console.Error.WriteLine("Invalid value for --compression-level. Valid values are optimal, fast, or none.");
+                    return 2;
+                }
+
+                compressionLevel = level.GetValueOrDefault();
             }
 
             UniversalPackageMetadata info;
@@ -143,16 +169,15 @@ namespace Inedo.UPack.CLI
                         this.SourcePath,
                         "/",
                         true,
+                        compressionLevel,
                         s => string.IsNullOrWhiteSpace(this.Manifest) || !string.Equals(s, "upack.json", StringComparison.OrdinalIgnoreCase),
                         cancellationToken
                     );
                 }
                 else
                 {
-                    using (var file = File.Open(this.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    {
-                        await builder.AddFileAsync(file, Path.GetFileName(this.SourcePath), File.GetLastWriteTimeUtc(this.SourcePath), cancellationToken);
-                    }
+                    using var file = File.Open(this.SourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    await builder.AddFileAsync(file, Path.GetFileName(this.SourcePath), File.GetLastWriteTimeUtc(this.SourcePath), compressionLevel, cancellationToken);
                 }
             }
 
