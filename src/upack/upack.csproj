@@ -18,6 +18,6 @@
     <RepositoryUrl>https://github.com/Inedo/upack.git</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Inedo.UPack" Version="2.1.0-rc.1" />
+    <PackageReference Include="Inedo.UPack" Version="2.1.0" />
   </ItemGroup>
 </Project>
