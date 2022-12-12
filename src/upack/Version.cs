@@ -1,6 +1,4 @@
 ﻿using System.ComponentModel;
-using System.Diagnostics;
-using System.Reflection;
 
 namespace Inedo.UPack.CLI
 {
@@ -10,12 +8,7 @@ namespace Inedo.UPack.CLI
     {
         public override Task<int> RunAsync(CancellationToken cancellationToken)
         {
-            var assembly = Assembly.GetExecutingAssembly();
-            var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
-            var version = fvi.FileVersion;
-
-            Console.WriteLine(version);
-
+            Console.WriteLine(typeof(Program).Assembly.GetName().Version);
             return Task.FromResult(0);
         }
     }
