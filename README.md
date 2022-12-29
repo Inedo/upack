@@ -100,6 +100,7 @@ Update the specified universal package.
  - `userregistry` - Register the package in the user registry instead of the machine registry.
  - `unregistered` - Do not register the package in a local registry.
  - `cache` - Cache the contents of the package in the local registry.
+ - `clean` - Delete the directory of the package to perform a clean update.
  - `force` - Force the update even if it's already up-to-date.
 
 ### remove

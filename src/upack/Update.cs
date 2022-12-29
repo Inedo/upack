@@ -72,6 +72,12 @@ namespace Inedo.UPack.CLI
         [DefaultValue(false)]
         public bool PreserveTimestamps { get; set; } = false;
 
+        [DisplayName("clean")]
+        [Description("Delete the directory of the package to perform a clean update.")]
+        [ExtraArgument]
+        [DefaultValue(false)]
+        public bool Clean { get; set; } = false;
+
         [DisplayName("force")]
         [Description("Force the update even if it's already up-to-date.")]
         [ExtraArgument]
@@ -94,6 +100,8 @@ namespace Inedo.UPack.CLI
                 }
             }
             var installedPackageRegistry = packages.FirstOrDefault(p => p.Name == PackageName);
+            
+                
 
             var targetDirectory = this.TargetDirectory;
             if (string.IsNullOrEmpty(targetDirectory))
@@ -110,15 +118,15 @@ namespace Inedo.UPack.CLI
             string sourceUrl = this.SourceUrl;
             if (string.IsNullOrEmpty(sourceUrl))
             {
-                try
-                {
-                    sourceUrl = installedPackageRegistry.FeedUrl;
-                }
-                catch
+                if(installedPackageRegistry == null || installedPackageRegistry.FeedUrl == null)
                 {
                     throw new UpackException("Package registry not found! \n" +
                         "If it's installed, consider declaring the source url.");
                 }
+                else
+                {
+                    sourceUrl = installedPackageRegistry.FeedUrl;
+                } 
             }
               
             var client = CreateClient(sourceUrl, this.Authentication);
@@ -150,21 +158,29 @@ namespace Inedo.UPack.CLI
                 }
             }
 
-            // Remove files to make a clean update
-            bool removed = false;
-            removed = await RemoveAsync(targetDirectory, this.PackageName, this.UserRegistry, false, cancellationToken);
-            if (!removed)
-                return 0;
+            if (this.Clean)
+            {
+                // Remove files to make a clean update
+                bool removed = false;
+                removed = await RemoveAsync(targetDirectory, this.PackageName, this.UserRegistry, false, cancellationToken);
+                if (!removed)
+                    return 0;
+            }
+            
 
             using (var package = new UniversalPackage(await openPackageAsync()))
             {
                 id = new UniversalPackageId(package.Group, package.Name);
                 version = package.Version;
-                await UnpackZipAsync(targetDirectory, false, package, this.PreserveTimestamps, cancellationToken);
+                await UnpackZipAsync(targetDirectory, !(this.Clean), package, this.PreserveTimestamps, cancellationToken);
             }
 
             if (!this.Unregistered)
             {
+                var comment = installedPackageRegistry.InstallationReason;
+                if (!string.IsNullOrEmpty(this.Comment))
+                    comment = this.Comment;
+
                 using (var registry = PackageRegistry.GetRegistry(this.UserRegistry))
                 {
                     await registry.LockAsync(cancellationToken);
@@ -177,7 +193,7 @@ namespace Inedo.UPack.CLI
                             Version = version.ToString(),
                             InstallPath = targetDirectory,
                             InstallationDate = DateTimeOffset.Now.ToString("o"),
-                            InstallationReason = this.Comment,
+                            InstallationReason = comment,
                             InstalledBy = Environment.UserName,
                             InstalledUsing = "upack/" + typeof(Program).Assembly.GetName().Version.ToString()
                         }
