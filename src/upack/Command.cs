@@ -464,5 +464,57 @@ namespace Inedo.UPack.CLI
                 throw new UpackException($"The source package file '{zipFileName}' does not exist or could not be opened.", ex);
             }
         }
+
+        internal static async Task<bool> RemoveAsync(string targetDirectory, string packageName, bool userRegistry, bool removeRegistry, CancellationToken cancellationToken)
+        {
+            string[] dir = targetDirectory.Split('\\');
+
+            string finalDirectory = !(dir.Last() == packageName)
+                ? $"{targetDirectory}\\{packageName}" : targetDirectory;
+
+            if (Directory.Exists(finalDirectory))
+            {
+                try
+                {
+                    Directory.Delete(finalDirectory, true);
+                    await RemoveRegistry();
+
+                    return true;
+                }
+
+                catch (UpackException e)
+                {
+                    throw new UpackException(e.Message);
+                }
+            }
+            else
+            {
+                if (removeRegistry)
+                {
+                    await RemoveRegistry();
+                    return false;
+                }
+                throw new UpackException($"Package '{packageName}' was not found in directory '{targetDirectory}'");
+            }
+
+            async Task RemoveRegistry()
+            {
+                using (var registry = PackageRegistry.GetRegistry(userRegistry))
+                {
+                    if (removeRegistry)
+                    {
+                        IReadOnlyList<RegisteredPackage> packages = await registry.GetInstalledPackagesAsync();
+                        RegisteredPackage installedPackageRegistry = packages.FirstOrDefault(p => p.Name == packageName);
+                        if (installedPackageRegistry == null)
+                        {
+                            throw new UpackException($"The package {packageName} was not found in the registry");
+                        }
+                    }
+                    await registry.LockAsync(cancellationToken);
+                    await registry.UnregisterPackageAsync(new RegisteredPackage { Name = packageName }, cancellationToken);
+                }
+            }
+        }
+
     }
 }

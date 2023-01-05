@@ -84,6 +84,37 @@ Downloads the specified universal package and extracts its contents to a directo
  - `unregistered` - Do not register the package in a local registry.
  - `cache` - Cache the contents of the package in the local registry.
 
+### update
+
+Update the specified universal package.
+
+    upack update «package» [«version»] --source=«source» --target=«target» [--user=«authentication»] [--comment=«comment»] [--prerelease] [--userregistry] [--unregistered] [--cache] [--force]
+
+ - **`package`** - Package name and group, such as group/name.
+ - `version` - Package version. If not specified, the latest version is retrieved.
+ - `source` - URL of a upack API endpoint. If not specified, the URL in registry or `UPACK_FEED` environment variable is used.
+ - `target` - (Optional) Directory where the package is installed.
+ - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
+ - `prerelease` - When version is not specified, will install the latest prerelase version instead of the latest stable version.
+ - `comment` - The reason for updating the package, for the local registry.
+ - `userregistry` - Register the package in the user registry instead of the machine registry.
+ - `unregistered` - Do not register the package in a local registry.
+ - `cache` - Cache the contents of the package in the local registry.
+ - `clean` - Delete the directory of the package to perform a clean update.
+ - `force` - Force the update even if it's already up-to-date.
+
+### remove
+
+Remove the specified universal package.
+
+    upack remove «package» --target=«target» [--userregistry] [--rmregistry]
+
+ - **`package`** - Package name and group, such as group/name.
+ - `target` - (Optional) Directory where the package to be removed is located.
+ - `userregistry` - Use this if you registered the package installation using the user registry instead of the machine registry.
+ - `rmregistry` - Use this if you need to remove a remaining registry from a package that has been deleted without using the tool. The command will still check if the package exists to remove it as well.
+
+
 ### get
 
 Downloads a universal package from a feed without installing it.
