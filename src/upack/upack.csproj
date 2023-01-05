@@ -6,7 +6,7 @@
     <Company>Inedo</Company>
     <Product>upack</Product>
     <Description>upack is a simple CLI tool for building, installing, and publishing universal packages to upack feeds.</Description>
-    <Copyright>Copyright © Inedo 2022</Copyright>
+    <Copyright>Copyright © Inedo 2023</Copyright>
     <OutputType>Exe</OutputType>
     <RootNamespace>Inedo.UPack.CLI</RootNamespace>
     <ImplicitUsings>true</ImplicitUsings>
@@ -16,7 +16,11 @@
     <PackageTags>inedo proget upack universal</PackageTags>
     <PackageProjectUrl>https://github.com/Inedo/upack</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Inedo/upack.git</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" Link="README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Inedo.UPack" Version="2.1.0" />
   </ItemGroup>
