@@ -17,9 +17,11 @@
     <PackageProjectUrl>https://github.com/Inedo/upack</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Inedo/upack.git</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>upack-icon.png</PackageIcon>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\README.md" Link="README.md" Pack="true" PackagePath="/" />
+    <None Include="upack-icon.png" Pack="true" PackagePath="/" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Inedo.UPack" Version="2.1.0" />
