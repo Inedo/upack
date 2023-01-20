@@ -73,7 +73,7 @@ Downloads the specified universal package and extracts its contents to a directo
     upack install «package» [«version»] --source=«source» --target=«target» [--user=«authentication»] [--comment=«comment»] [--overwrite] [--prerelease] [--userregistry] [--unregistered] [--cache]
 
  - **`package`** - Package name and group, such as group/name.
- - `version` - Package version. If not specified, the latest version is retrieved.
+ - `version` - Package version. Supports wildcards (*). If not specified, the latest version is retrieved.
  - `source` - URL of a upack API endpoint. If not specified, the `UPACK_FEED` environment variable is used.
  - `target` - Directory where the contents of the package will be extracted.
  - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
@@ -91,7 +91,7 @@ Update the specified universal package.
     upack update «package» [«version»] --source=«source» --target=«target» [--user=«authentication»] [--comment=«comment»] [--prerelease] [--userregistry] [--unregistered] [--cache] [--force]
 
  - **`package`** - Package name and group, such as group/name.
- - `version` - Package version. If not specified, the latest version is retrieved.
+ - `version` - Package version. Supports wildcards (*). If not specified, the latest version is retrieved.
  - `source` - URL of a upack API endpoint. If not specified, the URL in registry or `UPACK_FEED` environment variable is used.
  - `target` - (Optional) Directory where the package is installed.
  - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
@@ -122,7 +122,7 @@ Downloads a universal package from a feed without installing it.
     upack get «package» [«version»] --source=«source» --target=«target» [--user=«authentication»] [--overwrite] [--prerelease]
 
  - **`package`** - Package name and group, such as group/name.
- - `version` - Package version. If not specified, the latest version is retrieved.
+ - `version` - Package version. Supports wildcards (*). If not specified, the latest version is retrieved.
  - `source` - URL of a upack API endpoint. If not specified, the `UPACK_FEED` environment variable is used.
  - `target` - Directory where the contents of the package will be extracted.
  - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
@@ -174,7 +174,7 @@ Displays metadata for a remote universal package.
     upack metadata «package» [«version»] --source=«source» [--user=«authentication»] [--file=«file»]
 
  - **`package`** - Package name and group, such as group/name.
- - `version` - Package version. If not specified, the latest version is retrieved.
+ - `version` - Package version. Supports wildcards (*). If not specified, the latest version is retrieved.
  - **`source`** - URL of a upack API endpoint. If not specified, the `UPACK_FEED` environment variable is used.
  - `user` - Credentials to use for servers that require authentication. This can be either `«username»:«password»` or `api:«api-key»`. If not specified, the `UPACK_USER` environment variable is used.
  - `file` - The metadata file to display relative to the .upack root; the default is upack.json.
