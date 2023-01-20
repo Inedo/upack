@@ -88,7 +88,7 @@ Downloads the specified universal package and extracts its contents to a directo
 
 Update the specified universal package.
 
-    upack update «package» [«version»] --source=«source» --target=«target» [--user=«authentication»] [--comment=«comment»] [--prerelease] [--userregistry] [--unregistered] [--cache] [--force]
+    upack update «package» [«version»] --source=«source» --target=«target» [--user=«authentication»] [--comment=«comment»] [--prerelease] [--userregistry] [--unregistered] [--cache] [--force] [--check]
 
  - **`package`** - Package name and group, such as group/name.
  - `version` - Package version. Supports wildcards (*). If not specified, the latest version is retrieved.
@@ -102,6 +102,7 @@ Update the specified universal package.
  - `cache` - Cache the contents of the package in the local registry.
  - `clean` - Delete the directory of the package to perform a clean update.
  - `force` - Force the update even if it's already up-to-date.
+ - `check` - Checks for new package update.
 
 ### remove
 

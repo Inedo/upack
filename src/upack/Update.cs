@@ -84,6 +84,12 @@ namespace Inedo.UPack.CLI
         [DefaultValue(false)]
         public bool Force { get; set; } = false;
 
+        [DisplayName("check")]
+        [Description("Checks for new package update.")]
+        [ExtraArgument]
+        [DefaultValue(false)]
+        public bool Check { get; set; } = false;
+
         public override async Task<int> RunAsync(CancellationToken cancellationToken)
         {
             IReadOnlyList<RegisteredPackage> packages;
@@ -100,8 +106,8 @@ namespace Inedo.UPack.CLI
                 }
             }
             var installedPackageRegistry = packages.FirstOrDefault(p => p.Name == PackageName);
-            
-                
+
+
 
             var targetDirectory = this.TargetDirectory;
             if (string.IsNullOrEmpty(targetDirectory))
@@ -112,7 +118,7 @@ namespace Inedo.UPack.CLI
                 if (string.IsNullOrEmpty(targetDirectory))
                     targetDirectory = Environment.CurrentDirectory;
             }
-                
+
 
 
             string sourceUrl = this.SourceUrl;
@@ -126,9 +132,9 @@ namespace Inedo.UPack.CLI
                 else
                 {
                     sourceUrl = installedPackageRegistry.FeedUrl;
-                } 
+                }
             }
-              
+
             var client = CreateClient(sourceUrl, this.Authentication);
             UniversalPackageId id;
             try
@@ -141,6 +147,21 @@ namespace Inedo.UPack.CLI
             }
 
             var version = await GetVersionAsync(client, id, this.Version, this.Prerelease, cancellationToken);
+
+            if (Check)
+            {
+                var parsedInstalledVersion = UniversalPackageVersion.TryParse(installedPackageRegistry.Version);
+                if (parsedInstalledVersion < version)
+                {
+                    Console.WriteLine($"New update found. {version}");
+                    return 0;
+                }
+                else
+                {
+                    Console.WriteLine("The installed version is the latest.");
+                    return 0;
+                }
+            }
 
             // Compare versions
             if (!Force)
@@ -166,7 +187,7 @@ namespace Inedo.UPack.CLI
                 if (!removed)
                     return 0;
             }
-            
+
 
             using (var package = new UniversalPackage(await openPackageAsync()))
             {
