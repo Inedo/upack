@@ -385,9 +385,9 @@ namespace Inedo.UPack.CLI
                 UniversalPackageVersion maxWildVersion = new(versionPartsMax[0], versionPartsMax[1], versionPartsMax[2]);
                 UniversalPackageVersion minWildVersion = new(versionPartsMin[0], versionPartsMin[1], versionPartsMin[2]);
 
-                var wildVersions = versions.Where(v => v.Version <= maxWildVersion 
-                                                    && v.Version >= minWildVersion)
-                                                    .ToArray();
+                var wildVersions = versions.Where(v => v.Version <= maxWildVersion && v.Version >= minWildVersion)
+                                                .Where(v => v.Version.Prerelease != null == prerelease)
+                                                .ToArray();
 
                 if (!wildVersions.Any())
                     throw new UpackException($"Version not found {version}");
