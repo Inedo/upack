@@ -351,7 +351,50 @@ namespace Inedo.UPack.CLI
 
         internal static async Task<UniversalPackageVersion> GetVersionAsync(UniversalFeedClient client, UniversalPackageId id, string version, bool prerelease, CancellationToken cancellationToken)
         {
-            if (!string.IsNullOrEmpty(version) && !string.Equals(version, "latest", StringComparison.OrdinalIgnoreCase) && !prerelease)
+            IReadOnlyList<RemoteUniversalPackageVersion> versions;
+
+            if (!string.IsNullOrEmpty(version) && version.Contains('*'))
+            {
+                versions = await ListVersions();
+
+                string[] splitedVersion = version.Split(".");
+
+                if(splitedVersion.Length > 3 )
+                    throw new UpackException($"Invalid UPack version number: {version}");
+
+                int[] versionPartsMax = new[] { int.MaxValue, int.MaxValue, int.MaxValue };
+                int[] versionPartsMin = new[] { 0, 0, 0};
+                
+                try
+                {
+                    for (int i = 0; i < splitedVersion.Length; i++)
+                    {
+                        if (splitedVersion[i] != "*")
+                        {
+                            versionPartsMax[i] = int.Parse(splitedVersion[i]);
+                            versionPartsMin[i] = int.Parse(splitedVersion[i]);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    throw new UpackException($"Invalid UPack version number: {version}");
+                }
+            
+
+                UniversalPackageVersion maxWildVersion = new(versionPartsMax[0], versionPartsMax[1], versionPartsMax[2]);
+                UniversalPackageVersion minWildVersion = new(versionPartsMin[0], versionPartsMin[1], versionPartsMin[2]);
+
+                var wildVersions = versions.Where(v => v.Version <= maxWildVersion && v.Version >= minWildVersion)
+                                                .Where(v => v.Version.Prerelease != null == prerelease)
+                                                .ToArray();
+
+                if (!wildVersions.Any())
+                    throw new UpackException($"Version not found {version}");
+
+                return wildVersions.Max(v => v.Version);
+            }
+            else if (!string.IsNullOrEmpty(version) && !string.Equals(version, "latest", StringComparison.OrdinalIgnoreCase) && !prerelease)
             {
                 var parsed = UniversalPackageVersion.TryParse(version);
                 if (parsed != null)
@@ -360,24 +403,29 @@ namespace Inedo.UPack.CLI
                 throw new UpackException($"Invalid UPack version number: {version}");
             }
 
-            IReadOnlyList<RemoteUniversalPackageVersion> versions;
-            try
-            {
-                versions = await client.ListPackageVersionsAsync(id, false, null, cancellationToken);
-            }
-            catch (WebException ex)
-            {
-                throw ConvertWebException(ex);
-            }
-
-            if (!versions.Any())
-                throw new UpackException($"No versions of package {id} found.");
+            versions = await ListVersions();
 
             var matchingVersions = versions.Where(v => v.Version.Prerelease != null == prerelease).ToArray();
             if (!matchingVersions.Any())
                 throw new UpackException($"No {(prerelease ? "pre" : "")}release versions of package {id} found.");
             return matchingVersions.Max(v => v.Version);
-        }
+
+            async Task<IReadOnlyList<RemoteUniversalPackageVersion>> ListVersions()
+            {
+                try
+                {
+                    versions = await client.ListPackageVersionsAsync(id, false, null, cancellationToken);
+                    if (!versions.Any())
+                        throw new UpackException($"No versions of package {id} found.");
+
+                    return versions;
+                }
+                catch (WebException ex)
+                {
+                    throw ConvertWebException(ex);
+                }
+            }
+        }        
 
         internal const string PackageNotFoundMessage = "The specified universal package was not found at the given URL";
         internal const string FeedNotFoundMessage = "No UPack feed was found at the given URL";
