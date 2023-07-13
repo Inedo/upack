@@ -1,11 +1,13 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using Inedo.UPack.Packaging;
 
 namespace Inedo.UPack.CLI
 {
     [DisplayName("repack")]
     [Description("Creates a new universal package by repackaging an existing package with a new version number and audit information.")]
-    public sealed class Repack : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class Repack : Command
     {
         [Obsolete]
         [AlternateName("manifest")]

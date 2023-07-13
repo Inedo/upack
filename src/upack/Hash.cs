@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Inedo.UPack.CLI
 {
     [DisplayName("hash")]
     [Description("Calculates the SHA1 hash of a local package and writes it to standard output.")]
-    public sealed class Hash : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class Hash : Command
     {
         [DisplayName("package")]
         [Description("Path of a valid .upack file.")]

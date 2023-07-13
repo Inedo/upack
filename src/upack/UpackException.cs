@@ -1,6 +1,6 @@
 ﻿namespace Inedo.UPack.CLI
 {
-    public sealed class UpackException : Exception
+    internal sealed class UpackException : Exception
     {
         public UpackException()
         {

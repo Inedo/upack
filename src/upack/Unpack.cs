@@ -1,11 +1,13 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using Inedo.UPack.Packaging;
 
 namespace Inedo.UPack.CLI
 {
     [DisplayName("unpack")]
     [Description("Extracts the contents of a universal package to a directory.")]
-    public sealed class Unpack : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class Unpack : Command
     {
         [DisplayName("package")]
         [Description("Path of a valid .upack file.")]

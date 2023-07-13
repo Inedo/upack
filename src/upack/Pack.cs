@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using Inedo.UPack.Packaging;
 
@@ -6,7 +7,8 @@ namespace Inedo.UPack.CLI
 {
     [DisplayName("pack")]
     [Description("Creates a new universal package using specified metadata and source directory.")]
-    public sealed class Pack : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class Pack : Command
     {
         [DisplayName("manifest")]
         [AlternateName("metadata")]

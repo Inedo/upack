@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Inedo.UPack.Packaging;
 
@@ -6,7 +7,8 @@ namespace Inedo.UPack.CLI
 {
     [DisplayName("install")]
     [Description("Downloads the specified universal package and extracts its contents to a directory.")]
-    public sealed class Install : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class Install : Command
     {
         [DisplayName("package")]
         [Description("Package name and group, such as group/name.")]

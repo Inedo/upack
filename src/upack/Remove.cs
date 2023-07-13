@@ -1,9 +1,11 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Inedo.UPack.CLI
 {
     [DisplayName("remove")]
     [Description("Remove the specified universal package from directory.")]
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
     internal class Remove : Command
     {
         [DisplayName("package")]

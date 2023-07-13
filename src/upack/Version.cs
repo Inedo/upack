@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Inedo.UPack.CLI
 {
     [DisplayName("version")]
     [Description("Outputs the installed version of upack.")]
-    public class Version : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal class Version : Command
     {
         public override Task<int> RunAsync(CancellationToken cancellationToken)
         {

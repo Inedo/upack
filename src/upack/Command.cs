@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -8,7 +9,8 @@ using Inedo.UPack.Packaging;
 
 namespace Inedo.UPack.CLI
 {
-    public abstract class Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal abstract class Command
     {
         [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
         public sealed class PositionalArgumentAttribute : Attribute

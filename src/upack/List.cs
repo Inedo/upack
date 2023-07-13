@@ -1,11 +1,13 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using Inedo.UPack.Packaging;
 
 namespace Inedo.UPack.CLI
 {
     [DisplayName("list")]
     [Description("Lists packages installed in the local registry.")]
-    public sealed class List : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class List : Command
     {
         [DisplayName("userregistry")]
         [Description("List packages in the user registry instead of the machine registry.")]

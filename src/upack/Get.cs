@@ -1,11 +1,13 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 namespace Inedo.UPack.CLI
 {
     [DisplayName("get")]
     [Description("Downloads a universal package from a feed without installing it.")]
-    public sealed class Get : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class Get : Command
     {
         [DisplayName("package")]
         [Description("Package name and group, such as group/name.")]

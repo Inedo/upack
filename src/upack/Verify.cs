@@ -1,11 +1,13 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 namespace Inedo.UPack.CLI
 {
     [DisplayName("verify")]
     [Description("Verifies that a specified package hash matches the hash stored in a universal feed.")]
-    public sealed class Verify : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class Verify : Command
     {
         [DisplayName("package")]
         [Description("Path of a valid .upack file.")]

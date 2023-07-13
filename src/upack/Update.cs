@@ -1,11 +1,13 @@
 ﻿using Inedo.UPack.Packaging;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 namespace Inedo.UPack.CLI
 {
     [DisplayName("update")]
     [Description("Performs a clean update of the specified universal package.")]
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
     internal class Update : Command
     {
         [DisplayName("package")]

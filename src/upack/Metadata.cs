@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 
@@ -6,7 +7,8 @@ namespace Inedo.UPack.CLI
 {
     [DisplayName("metadata")]
     [Description("Displays metadata for a remote universal package.")]
-    public sealed class Metadata : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class Metadata : Command
     {
         [DisplayName("package")]
         [Description("Package name and group, such as group/name.")]

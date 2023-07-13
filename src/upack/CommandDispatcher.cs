@@ -3,21 +3,39 @@ using System.Reflection;
 
 namespace Inedo.UPack.CLI
 {
-    public sealed class CommandDispatcher
+    internal sealed class CommandDispatcher
     {
-        public static CommandDispatcher Default => new CommandDispatcher(typeof(Pack), typeof(Push), typeof(Unpack), typeof(Install), typeof(Update), typeof(Remove), typeof(List), typeof(Repack), typeof(Verify), typeof(Hash), typeof(Metadata), typeof(Get), typeof(Version));
+        private readonly Func<Command>[] commandFactories;
 
-        private readonly IEnumerable<Type> commands;
+        public static CommandDispatcher Default => new();
 
-        public CommandDispatcher(params Type[] commands)
+        private CommandDispatcher()
         {
-            this.commands = commands;
+            this.commandFactories = new[]
+            {
+                f<Pack>(),
+                f<Push>(),
+                f<Unpack>(),
+                f<Install>(),
+                f<Update>(),
+                f<Remove>(),
+                f<List>(),
+                f<Repack>(),
+                f<Verify>(),
+                f<Hash>(),
+                f<Metadata>(),
+                f<Get>(),
+                f<Version>()
+            };
+
+            static Func<Command> f<TCommand>() where TCommand : Command, new() => () => new TCommand();
         }
 
-        public void Main(string[] args)
+        public async Task<int> MainAsync(string[] args)
         {
             bool onlyPositional = false;
             bool hadError = false;
+            int exitCode = 0;
 
             var positional = new List<string>();
             var extra = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -58,9 +76,9 @@ namespace Inedo.UPack.CLI
             }
             else
             {
-                foreach (var command in commands)
+                foreach (var command in commandFactories)
                 {
-                    cmd = (Command)Activator.CreateInstance(command);
+                    cmd = command();
                     if (!string.Equals(cmd.DisplayName, positional[0], StringComparison.OrdinalIgnoreCase))
                     {
                         cmd = null;
@@ -68,9 +86,7 @@ namespace Inedo.UPack.CLI
                     }
 
                     if (hadError)
-                    {
                         break;
-                    }
 
                     positional.RemoveAt(0);
 
@@ -102,9 +118,7 @@ namespace Inedo.UPack.CLI
                     }
 
                     if (positional.Count > cmd.PositionalArguments.Count())
-                    {
                         hadError = true;
-                    }
 
                     foreach (var arg in cmd.ExtraArguments)
                     {
@@ -136,9 +150,7 @@ namespace Inedo.UPack.CLI
                     }
 
                     if (extra.Count != 0)
-                    {
                         hadError = true;
-                    }
 
                     break;
                 }
@@ -147,65 +159,62 @@ namespace Inedo.UPack.CLI
             if (hadError || cmd == null)
             {
                 if (cmd != null)
-                {
                     ShowHelp(cmd);
-                }
                 else
-                {
                     ShowGenericHelp();
-                }
-                Environment.ExitCode = 2;
+
+                exitCode = 2;
             }
             else
             {
-                using (var consoleCancelTokenSource = new CancellationTokenSource())
-                {
-                    Console.CancelKeyPress +=
-                        (s, e) =>
-                        {
-                            consoleCancelTokenSource.Cancel();
-                        };
+                using var consoleCancelTokenSource = new CancellationTokenSource();
 
+                Console.CancelKeyPress +=
+                    (s, e) =>
+                    {
+                        consoleCancelTokenSource.Cancel();
+                    };
+
+                try
+                {
                     try
                     {
-                        try
-                        {
-                            Environment.ExitCode = cmd.RunAsync(consoleCancelTokenSource.Token).GetAwaiter().GetResult();
-                        }
-                        catch (AggregateException ex) when (ex.InnerException is UpackException)
-                        {
-                            throw ex.InnerException;
-                        }
+                        exitCode = await cmd.RunAsync(consoleCancelTokenSource.Token);
                     }
-                    catch (TaskCanceledException)
+                    catch (AggregateException ex) when (ex.InnerException is UpackException)
                     {
-                        Console.Error.WriteLine("Operation was canceled by the user.");
-                        Environment.ExitCode = 3;
-                    }
-                    catch (UpackException ex)
-                    {
-                        Console.Error.WriteLine(ex.Message);
-                        Environment.ExitCode = 1;
+                        throw ex.InnerException;
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    Console.Error.WriteLine("Operation was canceled by the user.");
+                    exitCode = 3;
+                }
+                catch (UpackException ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    exitCode = 1;
+                }
             }
+
+            return exitCode;
         }
 
-        public void ShowGenericHelp()
+        private void ShowGenericHelp()
         {
             Console.Error.WriteLine($"upack {typeof(CommandDispatcher).Assembly.GetName().Version}");
-            Console.Error.WriteLine("Usage: upack «command»");
+            Console.Error.WriteLine("Usage: upack <command>");
             Console.Error.WriteLine();
 
-            foreach (var command in commands)
+            foreach (var f in commandFactories)
             {
-                Console.Error.WriteLine($"{command.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? command.Name} - {command.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty}");
+                var command = f();
+                var type = command.GetType();
+                Console.Error.WriteLine($"{type.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? command.DisplayName} - {type.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty}");
             }
         }
 
-        public void ShowHelp(Command cmd)
-        {
-            Console.Error.WriteLine(cmd.GetHelp());
-        }
+        private static void ShowHelp(Command cmd) => Console.Error.WriteLine(cmd.GetHelp());
     }
 }

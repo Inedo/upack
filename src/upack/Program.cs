@@ -2,9 +2,6 @@
 {
     public sealed class Program
     {
-        public static void Main(string[] args)
-        {
-            CommandDispatcher.Default.Main(args);
-        }
+        public static Task<int> Main(string[] args) => CommandDispatcher.Default.MainAsync(args);
     }
 }

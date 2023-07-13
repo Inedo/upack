@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Inedo.UPack.Packaging;
 
@@ -6,7 +7,8 @@ namespace Inedo.UPack.CLI
 {
     [DisplayName("push")]
     [Description("Pushes a universal package to the specified feed.")]
-    public sealed class Push : Command
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+    internal sealed class Push : Command
     {
         [DisplayName("package")]
         [Description("Path of a valid .upack file.")]

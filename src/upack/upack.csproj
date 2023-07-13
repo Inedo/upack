@@ -24,6 +24,6 @@
     <None Include="upack-icon.png" Pack="true" PackagePath="/" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Inedo.UPack" Version="2.1.0" />
+    <PackageReference Include="Inedo.UPack" Version="2.1.3" />
   </ItemGroup>
 </Project>
