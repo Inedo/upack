@@ -154,7 +154,7 @@ namespace Inedo.UPack.CLI
                 return 2;
             }
 
-            string relativePackageFileName = $"{info.Name}-{info.Version.Major}.{info.Version.Minor}.{info.Version.Patch}.upack";
+            string relativePackageFileName = $"{info.Name}-{info.Version:U}.upack";
             string targetFileName = Path.Combine(this.TargetDirectory ?? Environment.CurrentDirectory, relativePackageFileName);
 
             if (File.Exists(Path.Combine(this.SourcePath, relativePackageFileName)))
