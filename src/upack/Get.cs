@@ -89,11 +89,8 @@ namespace Inedo.UPack.CLI
             {
                 try
                 {
-                    var s = await client.GetPackageStreamAsync(id, version, cancellationToken);
-                    if (s == null)
-                        throw new UpackException(PackageNotFoundMessage);
-
-                    return s;
+                    return await client.GetPackageStreamAsync(id, version, cancellationToken)
+                        ?? throw new UpackException(PackageNotFoundMessage);
                 }
                 catch (WebException ex)
                 {

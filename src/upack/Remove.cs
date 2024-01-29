@@ -6,13 +6,12 @@ namespace Inedo.UPack.CLI
     [DisplayName("remove")]
     [Description("Remove the specified universal package from directory.")]
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
-    internal class Remove : Command
+    internal sealed class Remove : Command
     {
         [DisplayName("package")]
         [Description("Package name and group, such as group/name.")]
         [PositionalArgument(0)]
         public string PackageName { get; set; }
-
 
         [DisplayName("target")]
         [Description("(Optional) Directory where the package to be removed is located.")]
@@ -42,11 +41,11 @@ namespace Inedo.UPack.CLI
             bool removed = await RemoveAsync(targetDirectory, this.PackageName, this.UserRegistry, this.RemoveRegistry, cancellationToken);
 
             if (removed)
-            {            
+            {
                 Console.WriteLine($"The package '{PackageName}' was removed successfully");
             }
             else
-            { 
+            {
                 Console.WriteLine($"Package registry was removed with sucess.");
             }
 

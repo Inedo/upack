@@ -6,7 +6,7 @@ namespace Inedo.UPack.CLI
     [DisplayName("version")]
     [Description("Outputs the installed version of upack.")]
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
-    internal class Version : Command
+    internal sealed class Version : Command
     {
         public override Task<int> RunAsync(CancellationToken cancellationToken)
         {

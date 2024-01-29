@@ -144,10 +144,8 @@ namespace Inedo.UPack.CLI
                     }
                     else
                     {
-                        using (var stream = entry.Open())
-                        {
-                            await builder.AddFileRawAsync(stream, entry.RawPath, entry.Timestamp, cancellationToken);
-                        }
+                        using var stream = entry.Open();
+                        await builder.AddFileRawAsync(stream, entry.RawPath, entry.Timestamp, cancellationToken);
                     }
                 }
             }

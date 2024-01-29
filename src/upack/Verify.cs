@@ -32,10 +32,8 @@ namespace Inedo.UPack.CLI
             var metadata = GetPackageMetadata(this.PackagePath);
             var packageId = new UniversalPackageId(metadata.Group, metadata.Name);
             var client = CreateClient(this.SourceEndpoint, this.Authentication);
-            var remoteVersion = await client.GetPackageVersionAsync(packageId, metadata.Version, false, cancellationToken);
-
-            if (remoteVersion == null)
-                throw new UpackException($"Package {packageId} was not found in feed.");
+            var remoteVersion = await client.GetPackageVersionAsync(packageId, metadata.Version, false, cancellationToken)
+                ?? throw new UpackException($"Package {packageId} was not found in feed.");
 
             var sha1 = GetSHA1(this.PackagePath);
 

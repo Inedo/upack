@@ -8,7 +8,7 @@ namespace Inedo.UPack.CLI
     [DisplayName("update")]
     [Description("Performs a clean update of the specified universal package.")]
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
-    internal class Update : Command
+    internal sealed class Update : Command
     {
         [DisplayName("package")]
         [Description("Package name and group, such as group/name.")]
@@ -126,7 +126,7 @@ namespace Inedo.UPack.CLI
             string sourceUrl = this.SourceUrl;
             if (string.IsNullOrEmpty(sourceUrl))
             {
-                if(installedPackageRegistry == null || installedPackageRegistry.FeedUrl == null)
+                if (installedPackageRegistry == null || installedPackageRegistry.FeedUrl == null)
                 {
                     throw new UpackException("Package registry not found! \n" +
                         "If it's installed, consider declaring the source url.");
@@ -204,24 +204,23 @@ namespace Inedo.UPack.CLI
                 if (!string.IsNullOrEmpty(this.Comment))
                     comment = this.Comment;
 
-                using (var registry = PackageRegistry.GetRegistry(this.UserRegistry))
-                {
-                    await registry.LockAsync(cancellationToken);
-                    await registry.RegisterPackageAsync(
-                        new RegisteredPackage
-                        {
-                            FeedUrl = sourceUrl,
-                            Group = id.Group,
-                            Name = id.Name,
-                            Version = version.ToString(),
-                            InstallPath = targetDirectory,
-                            InstallationDate = DateTimeOffset.Now.ToString("o"),
-                            InstallationReason = comment,
-                            InstalledBy = Environment.UserName,
-                            InstalledUsing = "upack/" + typeof(Program).Assembly.GetName().Version.ToString()
-                        }
-                    );
-                }
+                using var registry = PackageRegistry.GetRegistry(this.UserRegistry);
+                await registry.LockAsync(cancellationToken);
+                await registry.RegisterPackageAsync(
+                    new RegisteredPackage
+                    {
+                        FeedUrl = sourceUrl,
+                        Group = id.Group,
+                        Name = id.Name,
+                        Version = version.ToString(),
+                        InstallPath = targetDirectory,
+                        InstallationDate = DateTimeOffset.Now.ToString("o"),
+                        InstallationReason = comment,
+                        InstalledBy = Environment.UserName,
+                        InstalledUsing = "upack/" + typeof(Program).Assembly.GetName().Version.ToString()
+                    },
+                    cancellationToken
+                );
             }
 
             Console.WriteLine($"Updated {PackageName} from {installedPackageRegistry.Version} to {version}");
@@ -230,34 +229,31 @@ namespace Inedo.UPack.CLI
 
             async Task<Stream> openPackageAsync()
             {
-                using (var registry = PackageRegistry.GetRegistry(this.UserRegistry))
+                using var registry = PackageRegistry.GetRegistry(this.UserRegistry);
+                if (this.CachePackages)
                 {
+                    var s = await registry.TryOpenFromCacheAsync(id, version, cancellationToken);
+                    if (s != null)
+                        return s;
+                }
+
+                try
+                {
+                    var s = await client.GetPackageStreamAsync(id, version, cancellationToken)
+                        ?? throw new UpackException(PackageNotFoundMessage);
+
                     if (this.CachePackages)
                     {
-                        var s = await registry.TryOpenFromCacheAsync(id, version, cancellationToken);
-                        if (s != null)
-                            return s;
+                        await registry.WriteToCacheAsync(id, version, s, cancellationToken);
+                        s.Dispose();
+                        return await registry.TryOpenFromCacheAsync(id, version, cancellationToken);
                     }
 
-                    try
-                    {
-                        var s = await client.GetPackageStreamAsync(id, version, cancellationToken);
-                        if (s == null)
-                            throw new UpackException(PackageNotFoundMessage);
-
-                        if (this.CachePackages)
-                        {
-                            await registry.WriteToCacheAsync(id, version, s, cancellationToken);
-                            s.Dispose();
-                            return await registry.TryOpenFromCacheAsync(id, version, cancellationToken);
-                        }
-
-                        return s;
-                    }
-                    catch (WebException ex)
-                    {
-                        throw ConvertWebException(ex, PackageNotFoundMessage);
-                    }
+                    return s;
+                }
+                catch (WebException ex)
+                {
+                    throw ConvertWebException(ex, PackageNotFoundMessage);
                 }
             }
         }

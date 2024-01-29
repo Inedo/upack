@@ -60,7 +60,7 @@ namespace Inedo.UPack.CLI
             }
 
             using var stream = await client.GetPackageFileStreamAsync(packageId, version, string.IsNullOrEmpty(this.FilePath) ? "upack.json" : this.FilePath, cancellationToken);
-            var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
             foreach (var p in doc.RootElement.EnumerateObject())
                 Console.WriteLine($"{p.Name} = {p.Value}");

@@ -87,12 +87,13 @@ namespace Inedo.UPack.CLI
                         p.SetValue(cmd, true);
                         return true;
                     }
-                    bool result;
-                    if (bool.TryParse(value, out result))
+
+                    if (bool.TryParse(value, out bool result))
                     {
                         p.SetValue(cmd, result);
                         return true;
                     }
+
                     Console.WriteLine($@"--{this.DisplayName} must be ""true"" or ""false"".");
                     return false;
                 }
@@ -108,6 +109,7 @@ namespace Inedo.UPack.CLI
                     {
                         p.SetValue(cmd, value);
                     }
+
                     return true;
                 }
 
@@ -361,12 +363,12 @@ namespace Inedo.UPack.CLI
 
                 string[] splitedVersion = version.Split(".");
 
-                if(splitedVersion.Length > 3 )
+                if (splitedVersion.Length > 3)
                     throw new UpackException($"Invalid UPack version number: {version}");
 
                 int[] versionPartsMax = new[] { int.MaxValue, int.MaxValue, int.MaxValue };
-                int[] versionPartsMin = new[] { 0, 0, 0};
-                
+                int[] versionPartsMin = new[] { 0, 0, 0 };
+
                 try
                 {
                     for (int i = 0; i < splitedVersion.Length; i++)
@@ -382,7 +384,7 @@ namespace Inedo.UPack.CLI
                 {
                     throw new UpackException($"Invalid UPack version number: {version}");
                 }
-            
+
 
                 UniversalPackageVersion maxWildVersion = new(versionPartsMax[0], versionPartsMax[1], versionPartsMax[2]);
                 UniversalPackageVersion minWildVersion = new(versionPartsMin[0], versionPartsMin[1], versionPartsMin[2]);
@@ -427,7 +429,7 @@ namespace Inedo.UPack.CLI
                     throw ConvertWebException(ex);
                 }
             }
-        }        
+        }
 
         internal const string PackageNotFoundMessage = "The specified universal package was not found at the given URL";
         internal const string FeedNotFoundMessage = "No UPack feed was found at the given URL";
@@ -452,14 +454,10 @@ namespace Inedo.UPack.CLI
                 {
                     try
                     {
-                        using (var reader = new StreamReader(ex.Response.GetResponseStream()))
-                        {
-                            var body = reader.ReadToEnd();
-                            if (!string.IsNullOrWhiteSpace(body))
-                            {
-                                message = message + ": " + body;
-                            }
-                        }
+                        using var reader = new StreamReader(ex.Response.GetResponseStream());
+                        var body = reader.ReadToEnd();
+                        if (!string.IsNullOrWhiteSpace(body))
+                            message = $"{message}: {body}";
                     }
                     catch
                     {
@@ -504,10 +502,8 @@ namespace Inedo.UPack.CLI
         {
             try
             {
-                using (var package = new UniversalPackage(zipFileName))
-                {
-                    return package.GetFullMetadata().Clone();
-                }
+                using var package = new UniversalPackage(zipFileName);
+                return package.GetFullMetadata().Clone();
             }
             catch (Exception ex)
             {
@@ -544,27 +540,23 @@ namespace Inedo.UPack.CLI
                     await RemoveRegistry();
                     return false;
                 }
+
                 throw new UpackException($"Package '{packageName}' was not found in directory '{targetDirectory}'");
             }
 
             async Task RemoveRegistry()
             {
-                using (var registry = PackageRegistry.GetRegistry(userRegistry))
+                using var registry = PackageRegistry.GetRegistry(userRegistry);
+                if (removeRegistry)
                 {
-                    if (removeRegistry)
-                    {
-                        IReadOnlyList<RegisteredPackage> packages = await registry.GetInstalledPackagesAsync();
-                        RegisteredPackage installedPackageRegistry = packages.FirstOrDefault(p => p.Name == packageName);
-                        if (installedPackageRegistry == null)
-                        {
-                            throw new UpackException($"The package {packageName} was not found in the registry");
-                        }
-                    }
-                    await registry.LockAsync(cancellationToken);
-                    await registry.UnregisterPackageAsync(new RegisteredPackage { Name = packageName }, cancellationToken);
+                    var packages = await registry.GetInstalledPackagesAsync();
+                    if (packages.FirstOrDefault(p => p.Name == packageName) == null)
+                        throw new UpackException($"The package {packageName} was not found in the registry");
                 }
+
+                await registry.LockAsync(cancellationToken);
+                await registry.UnregisterPackageAsync(new RegisteredPackage { Name = packageName }, cancellationToken);
             }
         }
-
     }
 }

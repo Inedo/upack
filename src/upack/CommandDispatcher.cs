@@ -53,7 +53,7 @@ namespace Inedo.UPack.CLI
                 }
                 else
                 {
-                    var parts = arg.Substring("--".Length).Split(new[] { '=' }, 2);
+                    var parts = arg["--".Length..].Split('=', 2);
                     if (extra.ContainsKey(parts[0]))
                     {
                         hadError = true;
