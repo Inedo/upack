@@ -6,15 +6,15 @@ upack is a command-line tool used to create and install universal packages; you 
 
 ## Installation
 
-upack requires the [.NET 6 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/6.0/runtime).
-
 ##### Use dotnet tool install:
 
 upack is available as a dotnet tool. You can install it using `dotnet tool install upack` and then execute it using `dotnet upack`.
 
 ##### Download Tool:
 
-If you don't want to use upack as a dotnet tool, you can download it from the [GitHub Releases Page](https://github.com/Inedo/upack/releases) instead.
+If you don't want to use upack as a dotnet tool, you can download it from the [GitHub Releases Page](https://github.com/Inedo/upack/releases) instead. You can either download a self-contained binary that targets your specific operating system, or a generic distribution that requires an installed .net version.
+
+Self-contained OS-specific downloads have no external dependencies.
 
 ## Command Line Reference
 

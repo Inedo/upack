@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
     <Title>upack</Title>
     <Authors>Inedo</Authors>
     <Company>Inedo</Company>
     <Product>upack</Product>
     <Description>upack is a simple CLI tool for building, installing, and publishing universal packages to upack feeds.</Description>
-    <Copyright>Copyright © Inedo 2023</Copyright>
+    <Copyright>Copyright © Inedo 2024</Copyright>
     <OutputType>Exe</OutputType>
     <RootNamespace>Inedo.UPack.CLI</RootNamespace>
     <ImplicitUsings>true</ImplicitUsings>
