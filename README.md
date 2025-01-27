@@ -1,6 +1,15 @@
-# upack
+# ⚠ This Library has been Discontinued ⚠
 
-[![Build status](https://buildmaster.inedo.com/api/ci-badges/image?API_Key=badges&$ApplicationId=10)](https://buildmaster.inedo.com/api/ci-badges/link?API_Key=badges&$ApplicationId=10)
+`upack`  has been discontinued in favor of `pgutil upack`. The commands are similar, but simpler:
+* https://github.com/Inedo/pgutil
+* https://docs.inedo.com/docs/proget/reference-api/proget-pgutil
+
+Please post issues or discuss at https://forums.inedo.com/
+
+-----------------------------------
+
+
+## What is (was) upack?
 
 upack is a command-line tool used to create and install universal packages; you can also see which packages are installed on a machine.
 
